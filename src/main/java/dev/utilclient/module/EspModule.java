@@ -16,7 +16,7 @@ public final class EspModule extends Module {
     private final ColorSetting passiveColor = color("Passive colour", 3);
     private final ColorSetting itemColor    = color("Item colour", 2);
 
-    public EspModule() { super("ESP", "Outline entities through walls"); }
+    public EspModule() { super("ESP", "Outline entities through walls", Category.RENDER); }
 
     private static boolean isSelf(Entity e) { return e == Minecraft.getInstance().player; }
 
@@ -27,6 +27,15 @@ public final class EspModule extends Module {
             case HOSTILE -> hostile.get();
             case PASSIVE -> passive.get();
             case OTHER   -> e instanceof ItemEntity && items.get();
+        };
+    }
+
+    public int colorOf(EntityClass c) {
+        return switch (c) {
+            case PLAYER  -> playerColor.rgb();
+            case HOSTILE -> hostileColor.rgb();
+            case PASSIVE -> passiveColor.rgb();
+            case OTHER   -> itemColor.rgb();
         };
     }
 

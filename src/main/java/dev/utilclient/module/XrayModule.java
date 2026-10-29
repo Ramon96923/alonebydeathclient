@@ -26,7 +26,7 @@ public final class XrayModule extends Module {
     private final BoolSetting coal, iron, copper, gold, redstone, lapis, diamond, emerald, debris, quartz;
 
     public XrayModule() {
-        super("Xray", "Only render selected ores");
+        super("Xray", "Only render selected ores", Category.RENDER);
         Runnable reload = XrayModule::reloadWorld;
         coal     = add("Coal", true, reload);
         iron     = add("Iron", true, reload);

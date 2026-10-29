@@ -5,9 +5,9 @@ import net.minecraft.world.phys.HitResult;
 
 /** Holds the attack key for you so you keep mining whatever your crosshair is on. */
 public final class AutoMineModule extends Module {
-    private final BoolSetting onlyBlocks = add("Only when aiming at a block", true);
+    private final BoolSetting onlyBlocks = add("Only on blocks", true);
 
-    public AutoMineModule() { super("AutoMine", "Hold left click automatically"); }
+    public AutoMineModule() { super("AutoMine", "Hold left click automatically", Category.PLAYER); }
 
     @Override
     public void onTick(Minecraft mc) {

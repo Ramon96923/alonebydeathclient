@@ -20,7 +20,7 @@ public final class TrackerModule extends Module {
 
     private static final String[] DIRS = {"Ahead", "Ahead R", "Right", "Behind R", "Behind", "Behind L", "Left", "Ahead L"};
 
-    public TrackerModule() { super("Tracker", "List nearby mobs & players"); }
+    public TrackerModule() { super("Tracker", "List nearby mobs & players", Category.RENDER); }
 
     private boolean accept(Entity e, LocalPlayer p) {
         if (e == p || e.isSpectator() || !(e instanceof net.minecraft.world.entity.LivingEntity le) || !le.isAlive()) return false;
@@ -40,7 +40,8 @@ public final class TrackerModule extends Module {
     }
 
     /** Called from the HUD element registered in UtilClient. */
-    public void render(GuiGraphicsExtractor g) {
+    @Override
+    public void renderHud(GuiGraphicsExtractor g, float partialTick) {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer p = mc.player;
         if (!isEnabled() || p == null || mc.level == null) return;
@@ -66,8 +67,8 @@ public final class TrackerModule extends Module {
 
         int w = 0;
         for (String s : lines) w = Math.max(w, font.width(s));
-        int x = mc.getWindow().getGuiScaledWidth() - w - 10;
-        int y = 6;
+        int x = 10;
+        int y = 34;
         g.fill(x - 4, y - 3, x + w + 4, y + lines.size() * 11 + 1, 0x90000000);
         for (int i = 0; i < lines.size(); i++) {
             g.text(font, lines.get(i), x, y + i * 11, colors.get(i), true);

@@ -13,10 +13,10 @@ public final class AutoHitModule extends Module {
     private final BoolSetting hostile   = add("Hostile mobs", true);
     private final BoolSetting passive   = add("Passive mobs", false);
     private final BoolSetting players   = add("Players", false);
-    private final BoolSetting sparePets = add("Spare pets/villagers", true);
-    private final BoolSetting cooldown  = add("Wait for cooldown", true);
+    private final BoolSetting sparePets = add("Spare pets", true);
+    private final BoolSetting cooldown  = add("Cooldown", true);
 
-    public AutoHitModule() { super("AutoHit", "Auto-attack nearby targets (farms)"); }
+    public AutoHitModule() { super("AutoHit", "Auto-attack nearby targets (farms)", Category.COMBAT); }
 
     private boolean valid(Entity e, LocalPlayer p) {
         if (e == p || !(e instanceof LivingEntity le) || !le.isAlive() || e.isSpectator()) return false;

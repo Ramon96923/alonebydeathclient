@@ -1,6 +1,10 @@
 # AloneByDeath Client (Fabric, Minecraft 26.3, singleplayer)
 
-Right Shift opens the click GUI. Modules: Xray, ESP, Tracker, AutoHit, AutoMine, AutoPlace, Fullbright.
+Right Shift opens the click GUI (drag panels, right-click a module for options, hover for a description).
+
+Combat: AutoHit, Triggerbot, Aimbot, AutoTotem, AutoCrystal, AutoAnchor
+Render: ESP, BlockESP, Tracers, Tracker, Xray, Fullbright, HUD
+Player: AutoMine, AutoPlace, Sprint, AutoWalk, AutoRespawn
 
 ## Build
 Requires JDK 25 and internet access for Gradle (to fetch Minecraft + Fabric).

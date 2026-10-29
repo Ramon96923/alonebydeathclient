@@ -6,10 +6,10 @@ import net.minecraft.world.phys.HitResult;
 /** Right-clicks for you at a set interval: places blocks, uses items. (Vanilla enforces a 4-tick minimum.) */
 public final class AutoPlaceModule extends Module {
     private final NumberSetting delay = num("Delay (ticks)", 4, 1, 20, 1);
-    private final BoolSetting onlyBlocks = add("Only when aiming at a block", true);
+    private final BoolSetting onlyBlocks = add("Only on blocks", true);
     private int counter;
 
-    public AutoPlaceModule() { super("AutoPlace", "Auto right-click / place blocks"); }
+    public AutoPlaceModule() { super("AutoPlace", "Auto right-click / place blocks", Category.PLAYER); }
 
     @Override
     public void onTick(Minecraft mc) {

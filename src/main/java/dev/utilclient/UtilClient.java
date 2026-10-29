@@ -24,8 +24,8 @@ public class UtilClient implements ClientModInitializer {
 
         // Lambda parameter types are (GuiGraphicsExtractor, DeltaTracker); the method name behind it doesn't matter.
         HudElementRegistry.addLast(
-                Identifier.fromNamespaceAndPath("alonebydeathclient", "tracker"),
-                (graphics, delta) -> ModuleManager.TRACKER.render(graphics));
+                Identifier.fromNamespaceAndPath("alonebydeathclient", "overlay"),
+                (graphics, delta) -> ModuleManager.renderHud(graphics, delta.getGameTimeDeltaPartialTick(false)));
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             while (openGui.consumeClick()) {

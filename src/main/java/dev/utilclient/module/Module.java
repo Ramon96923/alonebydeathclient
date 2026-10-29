@@ -1,6 +1,7 @@
 package dev.utilclient.module;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,12 +9,14 @@ import java.util.List;
 public abstract class Module {
     public final String name;
     public final String description;
+    public final Category category;
     public final List<Setting> settings = new ArrayList<>();
     private boolean enabled;
 
-    protected Module(String name, String description) {
+    protected Module(String name, String description, Category category) {
         this.name = name;
         this.description = description;
+        this.category = category;
     }
 
     protected BoolSetting add(String name, boolean def) { return add(name, def, null); }
@@ -51,4 +54,7 @@ public abstract class Module {
 
     /** Called every client tick while enabled and a world is loaded. */
     public void onTick(Minecraft mc) {}
+
+    /** Called every frame from the HUD layer while enabled (2D overlay drawing). */
+    public void renderHud(GuiGraphicsExtractor g, float partialTick) {}
 }

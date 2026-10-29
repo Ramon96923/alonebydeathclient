@@ -14,7 +14,7 @@ public abstract class EntityMixin {
         if (ModuleManager.ESP.shouldGlow((Entity) (Object) this)) cir.setReturnValue(true);
     }
 
-    @Inject(method = "getTeamColor", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "getTeamColor", at = @At("HEAD"), cancellable = true, require = 0)
     private void utilclient$color(CallbackInfoReturnable<Integer> cir) {
         int c = ModuleManager.ESP.colorFor((Entity) (Object) this);
         if (c != -1) cir.setReturnValue(c);

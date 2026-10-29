@@ -20,11 +20,11 @@ public class UtilClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         openGui = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.utilclient.gui", InputConstants.KEY_RSHIFT, KeyMapping.Category.MISC));
+                "key.alonebydeathclient.gui", InputConstants.KEY_RSHIFT, KeyMapping.Category.MISC));
 
         // Lambda parameter types are (GuiGraphicsExtractor, DeltaTracker); the method name behind it doesn't matter.
         HudElementRegistry.addLast(
-                Identifier.fromNamespaceAndPath("utilclient", "tracker"),
+                Identifier.fromNamespaceAndPath("alonebydeathclient", "tracker"),
                 (graphics, delta) -> ModuleManager.TRACKER.render(graphics));
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {

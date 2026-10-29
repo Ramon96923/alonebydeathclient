@@ -43,7 +43,7 @@ public class ClickGui extends Screen {
         boolean hit(double mx, double my) { return mx >= x && mx < x + PANEL_W && my >= y && my < y + ROW_H; }
     }
 
-    public ClickGui() { super(Component.literal("Util Client")); }
+    public ClickGui() { super(Component.literal("AloneByDeath Client")); }
 
     @Override public boolean isPauseScreen() { return false; } // world keeps running
 
@@ -85,7 +85,7 @@ public class ClickGui extends Screen {
         g.fill(x, top, x + PANEL_W, top + totalHeight(visible), BG);
         g.fill(x, top, x + PANEL_W, top + HEAD_H, HEAD);
         g.fill(x, top + HEAD_H - 2, x + PANEL_W, top + HEAD_H, ACCENT);
-        g.text(font, "Util Client", x + 8, top + (HEAD_H - font.lineHeight) / 2 - 1, TEXT, true);
+        g.text(font, "AloneByDeath Client", x + 8, top + (HEAD_H - font.lineHeight) / 2 - 1, TEXT, true);
 
         for (Placed p : placed) {
             if (p.hit(mx, my)) g.fill(p.x, p.y, p.x + PANEL_W, p.y + ROW_H, HOVER);

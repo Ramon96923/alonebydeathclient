@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "id": "utilclient",
+  "id": "alonebydeathclient",
   "version": "${version}",
-  "name": "Util Client",
-  "description": "Singleplayer utility client: click GUI, block xray, entity ESP.",
+  "name": "AloneByDeath Client",
+  "description": "Singleplayer utility client: click GUI, xray, ESP, tracker, auto hit, automine, auto place.",
   "environment": "client",
   "entrypoints": { "client": ["dev.utilclient.UtilClient"] },
-  "mixins": ["utilclient.mixins.json"],
+  "mixins": ["alonebydeathclient.mixins.json"],
   "depends": {
     "fabricloader": ">=0.19.5",
     "minecraft": "~26.3",

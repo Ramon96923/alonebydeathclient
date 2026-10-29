@@ -1,0 +1,6 @@
+-Xmaxerrs
+5000
+-proc:none
+-d
+/tmp/claude-0/-home-claude/e545c0da-31c1-5462-aeee-22aee0387cd4/scratchpad/jc
+@/tmp/claude-0/-home-claude/e545c0da-31c1-5462-aeee-22aee0387cd4/scratchpad/srcs.txt

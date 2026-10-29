@@ -1,7 +1,12 @@
 package dev.utilclient.module;
 
 public enum Category {
-    COMBAT("Combat"), RENDER("Render"), PLAYER("Player");
+    COMBAT("Combat"),
+    MOVEMENT("Movement"),
+    RENDER("Render"),
+    PLAYER("Player"),
+    MISC("Misc"),
+    CLIENT("Client");
 
     public final String label;
 

@@ -1,125 +1,139 @@
 package dev.utilclient.module;
 
-import dev.utilclient.util.Compat;
-import dev.utilclient.util.Ids;
+import dev.utilclient.util.CombatState;
+import dev.utilclient.util.DamageCalc;
+import dev.utilclient.util.Inv;
+import dev.utilclient.util.Placer;
 import dev.utilclient.util.TargetFilter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.Property;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Places a respawn anchor near a target, charges it with glowstone and detonates it.
- * Anchors only explode outside the Nether, so the module does nothing there.
+ * Anchor aura: places a respawn anchor next to the target, charges it with glowstone and detonates it.
+ * Damage is predicted for both of you. Anchors only explode outside the Nether, so it idles there.
  */
 public final class AutoAnchorModule extends Module {
-    private final NumberSetting targetRange = num("Target range", 8, 4, 12, 1);
-    private final NumberSetting placeRange  = num("Place range", 4.0, 2.0, 4.5, 0.5);
-    private final NumberSetting delay       = num("Delay (ticks)", 3, 1, 10, 1);
-    private final NumberSetting minHealth   = num("Min health", 14, 1, 20, 1);
-    private final NumberSetting safeDist    = num("Safe distance", 4.0, 2.0, 6.0, 0.5);
-    private final BoolSetting players       = add("Players", true);
-    private final BoolSetting hostile       = add("Hostile mobs", true);
-    private final BoolSetting passive       = add("Passive mobs", false);
-    private int cooldown;
+    private final NumberSetting targetRange = num("Target range", 10, 4, 16, 1).unit("m");
+    private final BoolSetting players = bool("Players", true);
+    private final BoolSetting hostile = bool("Hostile mobs", true);
+    private final BoolSetting passive = bool("Passive mobs", false);
+    private final NumberSetting placeRange = num("Place range", 4.5, 2, 6, 0.1).unit("m");
+    private final NumberSetting minDamage = num("Min damage", 6, 0, 36, 0.5);
+    private final NumberSetting maxSelf = num("Max self damage", 8, 0, 36, 0.5);
+    private final BoolSetting antiSuicide = bool("Anti suicide", true);
+    private final NumberSetting delay = num("Delay", 2, 0, 10, 1).unit("t").desc("Ticks between each step");
+    private final BoolSetting swapBack = bool("Swap back", true).desc("Return to your previous hotbar slot afterwards");
+    private final ModeSetting rotate = mode("Rotate", "Packet", "None", "Packet");
+    private final BoolSetting pauseOnEat = bool("Pause while eating", true);
+
+    private int wait;
+    private int returnSlot = -1;
 
     public AutoAnchorModule() { super("AutoAnchor", "Place, charge & detonate respawn anchors", Category.COMBAT); }
 
-    private static int charges(BlockState st) {
-        for (Property<?> pr : st.getProperties()) {
-            if (pr.getName().equals("charges") && st.getValue(pr) instanceof Integer i) return i;
-        }
-        return 0;
-    }
-
-    private static Vec3 faceHit(BlockPos pos, Direction face) {
-        Vec3 c = Vec3.atCenterOf(pos);
-        return c.add(face.getStepX() * 0.5, face.getStepY() * 0.5, face.getStepZ() * 0.5);
+    private boolean safe(LocalPlayer p, float self) {
+        return self <= maxSelf.get() && (!antiSuicide.get() || self < DamageCalc.totalHealth(p) - 1f);
     }
 
     @Override
     public void onTick(Minecraft mc) {
         LocalPlayer p = mc.player;
-        ClientLevel level = mc.level;
-        if (p == null || level == null || mc.gameMode == null || mc.gui.screen() != null || p.isSpectator()) return;
-        if (level.dimension() == Level.NETHER) return;
-        if (cooldown > 0) { cooldown--; return; }
-        if (p.getHealth() < minHealth.get()) return;
+        if (mc.gameMode == null || p.isSpectator() || mc.gui.screen() != null) return;
+        if (mc.level.dimension() == Level.NETHER) return;
+        if (pauseOnEat.get() && p.isUsingItem()) return;
+        if (wait > 0) { wait--; return; }
 
-        Entity target = TargetFilter.nearest(mc, targetRange.get(),
-                e -> TargetFilter.accept(e, p, players.get(), hostile.get(), passive.get(), true));
-        if (target == null) return;
-
+        LivingEntity target = (LivingEntity) TargetFilter.best(mc, targetRange.get(),
+                e -> TargetFilter.accept(e, p, players.get(), hostile.get(), passive.get(), true), "Distance");
+        if (target == null) {
+            restoreSlot(p);
+            return;
+        }
+        CombatState.target(target);
         Vec3 eye = p.getEyePosition();
-        Vec3 tpos = target.position();
-        BlockPos tp = target.blockPosition();
 
-        // 1) an existing anchor near the target?
+        // 1) an anchor already near the target?
         BlockPos anchor = null;
-        double bestD = 1e9;
-        for (int dx = -4; dx <= 4; dx++) for (int dy = -3; dy <= 3; dy++) for (int dz = -4; dz <= 4; dz++) {
-            BlockPos b = tp.offset(dx, dy, dz);
-            if (!level.getBlockState(b).is(Blocks.RESPAWN_ANCHOR)) continue;
-            Vec3 c = Vec3.atCenterOf(b);
-            if (c.distanceTo(eye) > placeRange.get()) continue;
-            double d = c.distanceTo(tpos);
-            if (d < bestD) { bestD = d; anchor = b; }
+        float best = 0;
+        BlockPos tp = target.blockPosition();
+        for (BlockPos b : BlockPos.betweenClosed(tp.offset(-4, -3, -4), tp.offset(4, 3, 4))) {
+            if (!mc.level.getBlockState(b).is(Blocks.RESPAWN_ANCHOR)) continue;
+            if (Vec3.atCenterOf(b).distanceTo(eye) > placeRange.get()) continue;
+            float dmg = DamageCalc.anchor(target, b);
+            if (dmg > best) { best = dmg; anchor = b.immutable(); }
         }
 
         if (anchor != null) {
-            BlockHitResult hit = new BlockHitResult(faceHit(anchor, Direction.UP), Direction.UP, anchor, false);
-            if (charges(level.getBlockState(anchor)) == 0) {
-                int slot = Compat.findHotbar(p, "glowstone");
-                if (slot < 0 || !Compat.selectHotbar(p, slot)) return;
-                mc.gameMode.useItemOn(p, InteractionHand.MAIN_HAND, hit);
+            BlockState st = mc.level.getBlockState(anchor);
+            int charges = st.getValue(BlockStateProperties.RESPAWN_ANCHOR_CHARGES);
+            if (charges == 0) {
+                if (!hold(p, Items.GLOWSTONE)) return;
+                Placer.interact(mc, anchor, Direction.UP, InteractionHand.MAIN_HAND, rotate.get());
             } else {
-                if (Vec3.atCenterOf(anchor).distanceTo(p.position()) < safeDist.get()) return;
-                InteractionHand hand;
-                if (!Ids.isItem(p.getOffhandItem(), "glowstone")) hand = InteractionHand.OFF_HAND;
-                else if (!Ids.isItem(p.getMainHandItem(), "glowstone")) hand = InteractionHand.MAIN_HAND;
-                else return;
-                mc.gameMode.useItemOn(p, hand, hit);
+                if (!safe(p, DamageCalc.anchor(p, anchor))) return;
+                // detonate with anything that isn't glowstone
+                if (p.getMainHandItem().is(Items.GLOWSTONE)) {
+                    int other = Inv.hotbar(p, s -> !s.is(Items.GLOWSTONE));
+                    if (other < 0) return;
+                    remember(p);
+                    Inv.select(p, other);
+                }
+                Placer.interact(mc, anchor, Direction.UP, InteractionHand.MAIN_HAND, rotate.get());
             }
-            cooldown = delay.getInt();
+            wait = delay.getInt();
             return;
         }
 
-        // 2) place a new anchor against a solid neighbour
-        int anchorSlot = Compat.findHotbar(p, "respawn_anchor");
-        if (anchorSlot < 0) return;
-
-        BlockPos bestAir = null, bestSupport = null;
-        Direction bestFace = null;
-        double bestScore = 1e9;
-        for (int dx = -3; dx <= 3; dx++) for (int dy = -1; dy <= 2; dy++) for (int dz = -3; dz <= 3; dz++) {
-            BlockPos a = tp.offset(dx, dy, dz);
-            if (!level.getBlockState(a).isAir()) continue;
-            Vec3 c = Vec3.atCenterOf(a);
-            if (c.distanceTo(eye) > placeRange.get()) continue;
-            double dt = c.distanceTo(tpos);
-            if (dt + 1.0 > c.distanceTo(p.position())) continue;
-            if (!level.getEntities((Entity) null, new AABB(a), e -> true).isEmpty()) continue;
-            for (Direction d : Direction.values()) {
-                BlockPos n = a.relative(d);
-                BlockState ns = level.getBlockState(n);
-                if (ns.isAir() || !ns.getFluidState().isEmpty()) continue;
-                if (dt < bestScore) { bestScore = dt; bestAir = a; bestSupport = n; bestFace = d.getOpposite(); }
-                break;
-            }
+        // 2) place a new anchor where it hurts the target most and us least
+        if (Inv.hotbar(p, Items.RESPAWN_ANCHOR) < 0) return;
+        BlockPos spot = null;
+        float bestDmg = 0;
+        for (BlockPos b : BlockPos.betweenClosed(tp.offset(-3, -1, -3), tp.offset(3, 2, 3))) {
+            if (Vec3.atCenterOf(b).distanceTo(eye) > placeRange.get()) continue;
+            if (!Placer.canPlaceAt(mc, b)) continue;
+            float dmg = DamageCalc.anchor(target, b);
+            if (dmg < minDamage.get() || dmg <= bestDmg) continue;
+            if (!safe(p, DamageCalc.anchor(p, b))) continue;
+            bestDmg = dmg;
+            spot = b.immutable();
         }
-        if (bestAir == null || !Compat.selectHotbar(p, anchorSlot)) return;
-        mc.gameMode.useItemOn(p, InteractionHand.MAIN_HAND,
-                new BlockHitResult(faceHit(bestSupport, bestFace), bestFace, bestSupport, false));
-        cooldown = delay.getInt();
+        if (spot == null || !hold(p, Items.RESPAWN_ANCHOR)) return;
+        Placer.place(mc, spot, InteractionHand.MAIN_HAND, rotate.get(), true);
+        wait = delay.getInt();
+    }
+
+    private void remember(LocalPlayer p) {
+        if (returnSlot < 0) returnSlot = Inv.selected(p);
+    }
+
+    private boolean hold(LocalPlayer p, net.minecraft.world.item.Item item) {
+        if (p.getMainHandItem().is(item)) return true;
+        int slot = Inv.hotbar(p, item);
+        if (slot < 0) return false;
+        remember(p);
+        Inv.select(p, slot);
+        return true;
+    }
+
+    private void restoreSlot(LocalPlayer p) {
+        if (returnSlot >= 0 && swapBack.get()) Inv.select(p, returnSlot);
+        returnSlot = -1;
+    }
+
+    @Override
+    protected void onDisable() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null) restoreSlot(mc.player);
+        returnSlot = -1;
     }
 }

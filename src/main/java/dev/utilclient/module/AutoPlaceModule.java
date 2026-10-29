@@ -3,10 +3,10 @@ package dev.utilclient.module;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.HitResult;
 
-/** Right-clicks for you at a set interval: places blocks, uses items. (Vanilla enforces a 4-tick minimum.) */
+/** Right-clicks for you at a set interval: places blocks, uses items. */
 public final class AutoPlaceModule extends Module {
-    private final NumberSetting delay = num("Delay (ticks)", 4, 1, 20, 1);
-    private final BoolSetting onlyBlocks = add("Only on blocks", true);
+    private final NumberSetting delay = num("Delay", 4, 1, 20, 1).unit("t");
+    private final BoolSetting onlyBlocks = bool("Only on blocks", true).desc("Only click while aiming at a block");
     private int counter;
 
     public AutoPlaceModule() { super("AutoPlace", "Auto right-click / place blocks", Category.PLAYER); }
@@ -16,7 +16,6 @@ public final class AutoPlaceModule extends Module {
         if (mc.gui.screen() != null) { mc.options.keyUse.setDown(false); return; }
         boolean aimingAtBlock = mc.hitResult != null && mc.hitResult.getType() == HitResult.Type.BLOCK;
         if (onlyBlocks.get() && !aimingAtBlock) { mc.options.keyUse.setDown(false); counter = 0; return; }
-
         counter++;
         if (counter >= delay.getInt()) {
             mc.options.keyUse.setDown(true);
@@ -26,7 +25,8 @@ public final class AutoPlaceModule extends Module {
         }
     }
 
-    @Override protected void onDisable() {
+    @Override
+    protected void onDisable() {
         counter = 0;
         Minecraft.getInstance().options.keyUse.setDown(false);
     }

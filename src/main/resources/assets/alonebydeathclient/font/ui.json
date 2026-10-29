@@ -1,0 +1,6 @@
+{
+  "providers": [
+    { "type": "ttf", "file": "alonebydeathclient:outfit_regular.ttf", "size": 9.5, "oversample": 4.0, "shift": [0.0, 0.0] },
+    { "type": "reference", "id": "minecraft:default" }
+  ]
+}

@@ -1,8 +1,23 @@
 {
-  "required": true,
+  "required": false,
   "minVersion": "0.8",
   "package": "dev.utilclient.mixin",
   "compatibilityLevel": "JAVA_21",
-  "client": ["BlockMixin", "EntityMixin"],
-  "injectors": { "defaultRequire": 1 }
+  "client": [
+    "BlockMixin",
+    "CameraMixin",
+    "ClientPacketListenerMixin",
+    "EntityMixin",
+    "EntityRendererMixin",
+    "GameRendererMixin",
+    "HudMixin",
+    "KeyboardHandlerMixin",
+    "LocalPlayerMixin",
+    "MinecraftAccessor",
+    "MouseHandlerMixin",
+    "MultiPlayerGameModeMixin",
+    "ScreenEffectRendererMixin",
+    "SetEntityMotionPacketMixin"
+  ],
+  "injectors": { "defaultRequire": 0 }
 }

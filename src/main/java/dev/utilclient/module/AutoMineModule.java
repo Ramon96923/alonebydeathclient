@@ -3,9 +3,9 @@ package dev.utilclient.module;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.HitResult;
 
-/** Holds the attack key for you so you keep mining whatever your crosshair is on. */
+/** Holds left click for you so you keep mining whatever your crosshair is on. */
 public final class AutoMineModule extends Module {
-    private final BoolSetting onlyBlocks = add("Only on blocks", true);
+    private final BoolSetting onlyBlocks = bool("Only on blocks", true).desc("Only hold attack while aiming at a block");
 
     public AutoMineModule() { super("AutoMine", "Hold left click automatically", Category.PLAYER); }
 

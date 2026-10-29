@@ -1,81 +1,85 @@
 package dev.utilclient.module;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
-import net.minecraft.tags.TagKey;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
-/** Hides every block except the selected ores (face culling is done in BlockMixin). */
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
+
+/** Only renders the blocks you pick; everything else turns invisible (face culling in BlockMixin). */
 public final class XrayModule extends Module {
-    private static TagKey<Block> tag(String path) {
-        return TagKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath("minecraft", path));
-    }
+    private final BoolSetting coal, iron, copper, gold, redstone, lapis, diamond, emerald, debris, quartz, storage, spawners;
+    private final BoolSetting fullbright = bool("Fullbright", true).desc("Light everything up while Xray is on");
 
-    private static final TagKey<Block> COAL_ORES = tag("coal_ores");
-    private static final TagKey<Block> IRON_ORES = tag("iron_ores");
-    private static final TagKey<Block> COPPER_ORES = tag("copper_ores");
-    private static final TagKey<Block> GOLD_ORES = tag("gold_ores");
-    private static final TagKey<Block> REDSTONE_ORES = tag("redstone_ores");
-    private static final TagKey<Block> LAPIS_ORES = tag("lapis_ores");
-    private static final TagKey<Block> DIAMOND_ORES = tag("diamond_ores");
-    private static final TagKey<Block> EMERALD_ORES = tag("emerald_ores");
-
-    private final BoolSetting coal, iron, copper, gold, redstone, lapis, diamond, emerald, debris, quartz;
+    private volatile Set<Block> targets = Set.of();
 
     public XrayModule() {
-        super("Xray", "Only render selected ores", Category.RENDER);
-        Runnable reload = XrayModule::reloadWorld;
-        coal     = add("Coal", true, reload);
-        iron     = add("Iron", true, reload);
-        copper   = add("Copper", true, reload);
-        gold     = add("Gold", true, reload);
-        redstone = add("Redstone", true, reload);
-        lapis    = add("Lapis", true, reload);
-        diamond  = add("Diamond", true, reload);
-        emerald  = add("Emerald", true, reload);
-        debris   = add("Ancient Debris", true, reload);
-        quartz   = add("Nether Quartz", false, reload);
+        super("Xray", "See ores through the ground", Category.RENDER);
+        Runnable reload = () -> { rebuild(); reloadWorld(); };
+        coal = bool("Coal", false, reload);
+        iron = bool("Iron", true, reload);
+        copper = bool("Copper", false, reload);
+        gold = bool("Gold", true, reload);
+        redstone = bool("Redstone", true, reload);
+        lapis = bool("Lapis", true, reload);
+        diamond = bool("Diamond", true, reload);
+        emerald = bool("Emerald", true, reload);
+        debris = bool("Ancient Debris", true, reload);
+        quartz = bool("Nether Quartz", false, reload);
+        storage = bool("Chests & storage", false, reload);
+        spawners = bool("Spawners", true, reload);
+        rebuild();
     }
 
-    public boolean isTarget(BlockState s) {
-        return (coal.get() && s.is(COAL_ORES))
-            || (iron.get() && s.is(IRON_ORES))
-            || (copper.get() && s.is(COPPER_ORES))
-            || (gold.get() && s.is(GOLD_ORES))
-            || (redstone.get() && s.is(REDSTONE_ORES))
-            || (lapis.get() && s.is(LAPIS_ORES))
-            || (diamond.get() && s.is(DIAMOND_ORES))
-            || (emerald.get() && s.is(EMERALD_ORES))
-            || (debris.get() && s.is(Blocks.ANCIENT_DEBRIS))
-            || (quartz.get() && s.is(Blocks.NETHER_QUARTZ_ORE));
-    }
-
-    /** Rebuilds chunk meshes. Method names are tried reflectively because they move between versions. */
-    static void reloadWorld() {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null) return;
-        if (mc.levelRenderer != null) {
-            for (String n : new String[] {"allChanged", "needsUpdate"}) {
-                if (tryInvoke(mc.levelRenderer, n)) return;
-            }
+    private void rebuild() {
+        Set<Block> set = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (Block b : BuiltInRegistries.BLOCK) {
+            String id = BuiltInRegistries.BLOCK.getKey(b).getPath();
+            if (wanted(id)) set.add(b);
         }
-        tryInvoke(mc, "reloadResourcePacks"); // heavy last resort, same as F3+T
+        targets = set;
     }
 
-    private static boolean tryInvoke(Object target, String name) {
-        try {
-            java.lang.reflect.Method m = target.getClass().getDeclaredMethod(name);
-            m.setAccessible(true);
-            m.invoke(target);
-            return true;
-        } catch (ReflectiveOperationException | RuntimeException e) {
+    private boolean wanted(String id) {
+        if (id.endsWith("_ore")) {
+            if (id.contains("coal")) return coal.get();
+            if (id.contains("iron")) return iron.get();
+            if (id.contains("copper")) return copper.get();
+            if (id.contains("gold")) return gold.get();
+            if (id.contains("redstone")) return redstone.get();
+            if (id.contains("lapis")) return lapis.get();
+            if (id.contains("diamond")) return diamond.get();
+            if (id.contains("emerald")) return emerald.get();
+            if (id.contains("quartz")) return quartz.get();
             return false;
         }
+        if (id.equals("ancient_debris")) return debris.get();
+        if (id.equals("spawner") || id.equals("trial_spawner")) return spawners.get();
+        if (id.equals("chest") || id.equals("trapped_chest") || id.equals("ender_chest") || id.equals("barrel")
+                || id.endsWith("shulker_box")) return storage.get();
+        return false;
     }
 
-    @Override protected void onEnable()  { reloadWorld(); }
-    @Override protected void onDisable() { reloadWorld(); }
+    public boolean isTarget(BlockState s) { return targets.contains(s.getBlock()); }
+
+    public boolean wantsFullbright() { return isEnabled() && fullbright.get(); }
+
+    static void reloadWorld() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null && mc.levelExtractor != null) mc.levelExtractor.allChanged();
+    }
+
+    @Override protected void onEnable() { rebuild(); reloadWorld(); }
+
+    @Override
+    protected void onDisable() {
+        reloadWorld();
+        FullbrightModule.update(Minecraft.getInstance());
+    }
+
+    @Override
+    public void onTick(Minecraft mc) { FullbrightModule.update(mc); }
 }

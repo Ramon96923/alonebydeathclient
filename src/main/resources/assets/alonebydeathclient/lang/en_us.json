@@ -1,1 +1,4 @@
-{ "key.alonebydeathclient.gui": "Open Click GUI" }
+{
+  "key.alonebydeathclient.gui": "Open Click GUI",
+  "key.category.alonebydeathclient.main": "AloneByDeath Client"
+}

@@ -43,7 +43,7 @@ public final class TrackerModule extends Module {
     public void render(GuiGraphicsExtractor g) {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer p = mc.player;
-        if (!isEnabled() || p == null || mc.level == null || mc.options.hideGui) return;
+        if (!isEnabled() || p == null || mc.level == null) return;
 
         List<Entity> found = new ArrayList<>(mc.level.getEntities(p, p.getBoundingBox().inflate(range.get()), e -> accept(e, p)));
         found.sort(Comparator.comparingDouble(p::distanceToSqr));

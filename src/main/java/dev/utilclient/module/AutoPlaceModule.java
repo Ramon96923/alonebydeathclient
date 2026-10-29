@@ -13,7 +13,7 @@ public final class AutoPlaceModule extends Module {
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.screen != null) { mc.options.keyUse.setDown(false); return; }
+        if (mc.gui.screen() != null) { mc.options.keyUse.setDown(false); return; }
         boolean aimingAtBlock = mc.hitResult != null && mc.hitResult.getType() == HitResult.Type.BLOCK;
         if (onlyBlocks.get() && !aimingAtBlock) { mc.options.keyUse.setDown(false); counter = 0; return; }
 

@@ -2,7 +2,6 @@ package dev.utilclient.module;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
@@ -33,7 +32,7 @@ public final class AutoHitModule extends Module {
     @Override
     public void onTick(Minecraft mc) {
         LocalPlayer p = mc.player;
-        if (p == null || mc.gameMode == null || mc.screen != null || p.isSpectator()) return;
+        if (p == null || mc.gameMode == null || mc.gui.screen() != null || p.isSpectator()) return;
         if (cooldown.get() && p.getAttackStrengthScale(0.0f) < 1.0f) return;
 
         double r = range.get();
@@ -47,7 +46,6 @@ public final class AutoHitModule extends Module {
         }
         if (best != null) {
             mc.gameMode.attack(p, best);
-            p.swing(InteractionHand.MAIN_HAND);
         }
     }
 }

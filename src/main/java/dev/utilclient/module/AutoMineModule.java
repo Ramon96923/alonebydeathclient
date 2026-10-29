@@ -11,7 +11,7 @@ public final class AutoMineModule extends Module {
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.screen != null) { mc.options.keyAttack.setDown(false); return; }
+        if (mc.gui.screen() != null) { mc.options.keyAttack.setDown(false); return; }
         boolean aimingAtBlock = mc.hitResult != null && mc.hitResult.getType() == HitResult.Type.BLOCK;
         mc.options.keyAttack.setDown(!onlyBlocks.get() || aimingAtBlock);
     }

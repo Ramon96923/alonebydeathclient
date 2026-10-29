@@ -4,7 +4,7 @@ Right Shift opens the click GUI. Modules: Xray, ESP, Tracker, AutoHit, AutoMine,
 
 ## Build
 Requires JDK 25 and internet access for Gradle (to fetch Minecraft + Fabric).
-1. Add a Gradle wrapper (copy from a project made at fabricmc.net/develop/template, or `gradle wrapper --gradle-version 9.5.1`).
+1. Add a Gradle wrapper (copy from a project made at fabricmc.net/develop/template, or `gradle wrapper --gradle-version 9.7.1`).
 2. `./gradlew build`  ->  jar in `build/libs/utilclient-1.0.0.jar` (use the one WITHOUT `-sources`).
 3. Put the jar in `.minecraft/mods` together with Fabric API 0.160.7+26.3 (or newer for 26.3) and Fabric Loader 0.19.5+.
 

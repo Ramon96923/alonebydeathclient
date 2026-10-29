@@ -26,10 +26,8 @@ public final class ColorSetting extends Setting {
     public int rgb() { return PRESETS[index].rgb(); }
 
     @Override
-    public void click(int button) {
-        if (button == 0) index = (index + 1) % PRESETS.length;
-        else if (button == 1) index = Math.floorMod(index - 1, PRESETS.length);
-        else return;
+    public void click(boolean left) {
+        index = Math.floorMod(index + (left ? 1 : -1), PRESETS.length);
         changed();
     }
 

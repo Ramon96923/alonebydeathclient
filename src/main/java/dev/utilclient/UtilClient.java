@@ -12,7 +12,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import org.lwjgl.glfw.GLFW;
 
 public class UtilClient implements ClientModInitializer {
     private static KeyMapping openGui;
@@ -21,8 +20,7 @@ public class UtilClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         openGui = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.utilclient.gui", InputConstants.Type.KEYSYM,
-                GLFW.GLFW_KEY_RIGHT_SHIFT, KeyMapping.Category.MISC));
+                "key.utilclient.gui", InputConstants.KEY_RSHIFT, KeyMapping.Category.MISC));
 
         // Lambda parameter types are (GuiGraphicsExtractor, DeltaTracker); the method name behind it doesn't matter.
         HudElementRegistry.addLast(
@@ -31,7 +29,7 @@ public class UtilClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             while (openGui.consumeClick()) {
-                if (mc.screen == null) mc.setScreenAndShow(new ClickGui());
+                if (mc.gui.screen() == null) mc.setScreenAndShow(new ClickGui());
             }
             ModuleManager.tick(mc);
             tickFullbright(mc);

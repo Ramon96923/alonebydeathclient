@@ -12,7 +12,7 @@ public final class BoolSetting extends Setting {
 
     public void toggle() { value = !value; changed(); }
 
-    @Override public void click(int button) { if (button == 0) toggle(); }
+    @Override public void click(boolean left) { if (left) toggle(); }
 
     @Override public String valueText() { return value ? "On" : "Off"; }
 }

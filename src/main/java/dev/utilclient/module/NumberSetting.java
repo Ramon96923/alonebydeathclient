@@ -17,10 +17,8 @@ public final class NumberSetting extends Setting {
     public int getInt() { return (int) Math.round(value); }
 
     @Override
-    public void click(int button) {
-        if (button == 0) value += step;
-        else if (button == 1) value -= step;
-        else return;
+    public void click(boolean left) {
+        value += left ? step : -step;
         value = Math.round(value / step) * step;
         value = Math.max(min, Math.min(max, value));
         changed();

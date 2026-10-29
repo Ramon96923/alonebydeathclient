@@ -1,5 +1,6 @@
 package dev.utilclient.gui;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.utilclient.module.BoolSetting;
 import dev.utilclient.module.ColorSetting;
 import dev.utilclient.module.Module;
@@ -10,7 +11,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -135,12 +135,13 @@ public class ClickGui extends Screen {
             if (!p.hit(event.x(), event.y())) continue;
             Module m = p.row.module();
             Setting s = p.row.setting();
-            int b = event.button();
+            boolean left = event.button() == InputConstants.MOUSE_BUTTON_LEFT;
+            boolean right = event.button() == InputConstants.MOUSE_BUTTON_RIGHT;
             if (s != null) {
-                s.click(b);
-            } else if (b == 0) {
+                if (left || right) s.click(left);
+            } else if (left) {
                 m.toggle();
-            } else if (b == 1 && !m.settings.isEmpty()) {
+            } else if (right && !m.settings.isEmpty()) {
                 if (!expanded.remove(m)) expanded.add(m);
             }
             return true;
@@ -156,7 +157,7 @@ public class ClickGui extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        if (event.key() == GLFW.GLFW_KEY_RIGHT_SHIFT) { onClose(); return true; }
+        if (event.key() == InputConstants.KEY_RSHIFT) { onClose(); return true; }
         return super.keyPressed(event);
     }
 }

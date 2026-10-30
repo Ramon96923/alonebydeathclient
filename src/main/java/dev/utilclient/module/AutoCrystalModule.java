@@ -1,6 +1,7 @@
 package dev.utilclient.module;
 
 import dev.utilclient.gui.Fonts;
+import dev.utilclient.render.WorldRender;
 import dev.utilclient.util.CombatState;
 import dev.utilclient.util.DamageCalc;
 import dev.utilclient.util.Draw;
@@ -219,8 +220,24 @@ public final class AutoCrystalModule extends Module {
     // ---- render -------------------------------------------------------------------------------
 
     @Override
+    public void renderWorld(WorldRender.Ctx ctx) {
+        if (!render.get() || lastPlace == null || System.currentTimeMillis() - lastPlaceTime > 1500) return;
+        int c = renderColor.get();
+        ctx.box(WorldRender.block(lastPlace), Draw.withAlpha(c, 0.35f), c | 0xFF000000);
+    }
+
+    @Override
     public void renderHud(GuiGraphicsExtractor g, float partialTick) {
         if (!render.get() || lastPlace == null || System.currentTimeMillis() - lastPlaceTime > 1500) return;
+        if (WorldRender.active()) {
+            if (!renderDamage.get()) return;
+            Projection pr = new Projection(Minecraft.getInstance(), g.guiWidth(), g.guiHeight());
+            double[] o = new double[3];
+            if (pr.project(lastPlace.getX() + 0.5, lastPlace.getY() + 0.5, lastPlace.getZ() + 0.5, o)) {
+                Fonts.centered(g, String.format(Locale.ROOT, "%.1f", lastDamage), (int) o[0], (int) o[1] - 4, 0xFFFFFFFF, true);
+            }
+            return;
+        }
         Minecraft mc = Minecraft.getInstance();
         Projection pr = new Projection(mc, g.guiWidth(), g.guiHeight());
         int[] rect = new int[4];

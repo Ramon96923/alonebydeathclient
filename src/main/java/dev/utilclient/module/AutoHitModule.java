@@ -51,7 +51,7 @@ public final class AutoHitModule extends Module {
     @Override protected void onDisable() { current = null; }
 
     static boolean isWeapon(ItemStack s) {
-        return s.is(ItemTags.SWORDS) || s.is(ItemTags.AXES) || s.is(Items.MACE) || s.is(Items.TRIDENT);
+        return s.is(ItemTags.SWORDS) || s.is(ItemTags.AXES) || s.is(ItemTags.SPEARS) || s.is(Items.MACE) || s.is(Items.TRIDENT);
     }
 
     private boolean valid(Minecraft mc, Entity e) {
@@ -75,7 +75,7 @@ public final class AutoHitModule extends Module {
         CombatState.target(target);
 
         if (!ready(p)) return;
-        if (ModuleManager.CRITICALS.holdForJump(p)) return;
+        if (ModuleManager.CRITICALS.waiting()) return;   // a held-back crit hit is about to land
 
         Vec3 aim = Rotations.aimPoint(target, p.getEyePosition(), "Closest");
         Rotations.face(mc, aim, rotate.get());

@@ -4,20 +4,27 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 
-/** Client-side night vision. Xray can switch it on too. */
+/** Gamma: paints the lightmap fully bright (also used by Xray). Night vision: client-side effect. */
 public final class FullbrightModule extends Module {
+    private final ModeSetting mode = mode("Mode", "Gamma", "Gamma", "Night vision")
+            .desc("Gamma lights everything evenly, Night vision uses the potion effect");
     private static boolean applied;
 
     public FullbrightModule() { super("Fullbright", "See in the dark", Category.RENDER); }
+
+    @Override public String info() { return mode.get(); }
+
+    /** Read by LightmapMixin every frame. */
+    public boolean gamma() { return isEnabled() && mode.is("Gamma"); }
 
     @Override public void onTick(Minecraft mc) { update(mc); }
 
     @Override protected void onDisable() { update(Minecraft.getInstance()); }
 
-    /** Adds or removes our night vision depending on Fullbright and Xray. */
     static void update(Minecraft mc) {
         if (mc.player == null) { applied = false; return; }
-        boolean want = ModuleManager.FULLBRIGHT.isEnabled() || ModuleManager.XRAY.wantsFullbright();
+        FullbrightModule f = ModuleManager.FULLBRIGHT;
+        boolean want = f.isEnabled() && f.mode.is("Night vision");
         if (want) {
             if (!mc.player.hasEffect(MobEffects.NIGHT_VISION)) {
                 mc.player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, MobEffectInstance.INFINITE_DURATION, 0, false, false, false));

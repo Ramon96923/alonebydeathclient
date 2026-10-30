@@ -22,20 +22,34 @@ public final class ModuleManager {
     // combat
     public static final AutoHitModule AUTO_HIT = new AutoHitModule();
     public static final TriggerbotModule TRIGGERBOT = new TriggerbotModule();
+    public static final AutoClickerModule AUTO_CLICKER = new AutoClickerModule();
     public static final AimbotModule AIMBOT = new AimbotModule();
     public static final CriticalsModule CRITICALS = new CriticalsModule();
+    public static final HitboxModule HITBOX = new HitboxModule();
+    public static final OldPvpModule OLD_PVP = new OldPvpModule();
+    public static final MaceModule MACE = new MaceModule();
+    public static final SpearModule SPEAR = new SpearModule();
     public static final AutoTotemModule AUTO_TOTEM = new AutoTotemModule();
     public static final AutoCrystalModule AUTO_CRYSTAL = new AutoCrystalModule();
     public static final AutoAnchorModule AUTO_ANCHOR = new AutoAnchorModule();
     public static final SurroundModule SURROUND = new SurroundModule();
     public static final AutoArmorModule AUTO_ARMOR = new AutoArmorModule();
     public static final AutoWeaponModule AUTO_WEAPON = new AutoWeaponModule();
+    public static final AutoTrapModule AUTO_TRAP = new AutoTrapModule();
+    public static final SelfTrapModule SELF_TRAP = new SelfTrapModule();
+    public static final HoleFillerModule HOLE_FILLER = new HoleFillerModule();
+    public static final AutoLogModule AUTO_LOG = new AutoLogModule();
     // movement
     public static final SprintModule SPRINT = new SprintModule();
     public static final AutoWalkModule AUTO_WALK = new AutoWalkModule();
     public static final StepModule STEP = new StepModule();
     public static final NoFallModule NO_FALL = new NoFallModule();
     public static final VelocityModule VELOCITY = new VelocityModule();
+    public static final ElytraFlyModule ELYTRA_FLY = new ElytraFlyModule();
+    public static final FlightModule FLIGHT = new FlightModule();
+    public static final SpeedModule SPEED = new SpeedModule();
+    public static final JesusModule JESUS = new JesusModule();
+    public static final ScaffoldModule SCAFFOLD = new ScaffoldModule();
     // render
     public static final EspModule ESP = new EspModule();
     public static final NametagsModule NAMETAGS = new NametagsModule();
@@ -47,6 +61,8 @@ public final class ModuleManager {
     public static final FullbrightModule FULLBRIGHT = new FullbrightModule();
     public static final ZoomModule ZOOM = new ZoomModule();
     public static final NoRenderModule NO_RENDER = new NoRenderModule();
+    public static final LogoutSpotsModule LOGOUT_SPOTS = new LogoutSpotsModule();
+    public static final BreadcrumbsModule BREADCRUMBS = new BreadcrumbsModule();
     // player
     public static final AutoMineModule AUTO_MINE = new AutoMineModule();
     public static final AutoPlaceModule AUTO_PLACE = new AutoPlaceModule();
@@ -54,19 +70,26 @@ public final class ModuleManager {
     public static final AutoEatModule AUTO_EAT = new AutoEatModule();
     public static final FastPlaceModule FAST_PLACE = new FastPlaceModule();
     public static final AutoRespawnModule AUTO_RESPAWN = new AutoRespawnModule();
+    public static final AutoMendModule AUTO_MEND = new AutoMendModule();
+    public static final ChestStealerModule CHEST_STEALER = new ChestStealerModule();
     // misc
     public static final FakePlayerModule FAKE_PLAYER = new FakePlayerModule();
     public static final MiddleClickFriendModule MIDDLE_CLICK_FRIEND = new MiddleClickFriendModule();
     public static final AntiAfkModule ANTI_AFK = new AntiAfkModule();
+    public static final AutoReconnectModule AUTO_RECONNECT = new AutoReconnectModule();
+    public static final VisualRangeModule VISUAL_RANGE = new VisualRangeModule();
+    public static final PopCounterModule POP_COUNTER = new PopCounterModule();
 
     public static final List<Module> ALL = List.of(
             CLICK_GUI, HUD, NOTIFICATIONS,
-            AUTO_HIT, TRIGGERBOT, AIMBOT, CRITICALS, AUTO_TOTEM, AUTO_CRYSTAL, AUTO_ANCHOR,
-            SURROUND, AUTO_ARMOR, AUTO_WEAPON,
-            SPRINT, AUTO_WALK, STEP, NO_FALL, VELOCITY,
+            AUTO_HIT, TRIGGERBOT, AUTO_CLICKER, AIMBOT, CRITICALS, HITBOX, OLD_PVP, MACE, SPEAR,
+            AUTO_TOTEM, AUTO_CRYSTAL, AUTO_ANCHOR, SURROUND, AUTO_ARMOR, AUTO_WEAPON,
+            AUTO_TRAP, SELF_TRAP, HOLE_FILLER, AUTO_LOG,
+            SPRINT, AUTO_WALK, STEP, NO_FALL, VELOCITY, ELYTRA_FLY, FLIGHT, SPEED, JESUS, SCAFFOLD,
             ESP, NAMETAGS, TRACERS, BLOCK_ESP, HOLE_ESP, TRACKER, XRAY, FULLBRIGHT, ZOOM, NO_RENDER,
-            AUTO_MINE, AUTO_PLACE, AUTO_TOOL, AUTO_EAT, FAST_PLACE, AUTO_RESPAWN,
-            FAKE_PLAYER, MIDDLE_CLICK_FRIEND, ANTI_AFK);
+            LOGOUT_SPOTS, BREADCRUMBS,
+            AUTO_MINE, AUTO_PLACE, AUTO_TOOL, AUTO_EAT, FAST_PLACE, AUTO_RESPAWN, AUTO_MEND, CHEST_STEALER,
+            FAKE_PLAYER, MIDDLE_CLICK_FRIEND, ANTI_AFK, AUTO_RECONNECT, VISUAL_RANGE, POP_COUNTER);
 
     static {
         for (Module m : ALL) m.addMeta();
@@ -137,6 +160,17 @@ public final class ModuleManager {
                 HUD.renderHud(g, partialTick);
             } catch (Throwable t) {
                 report(HUD, t);
+            }
+        }
+    }
+
+    public static void renderWorld(dev.utilclient.render.WorldRender.Ctx ctx) {
+        for (Module m : ALL) {
+            if (!m.isEnabled()) continue;
+            try {
+                m.renderWorld(ctx);
+            } catch (Throwable t) {
+                report(m, t);
             }
         }
     }

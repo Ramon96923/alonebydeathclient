@@ -51,7 +51,7 @@ public final class TriggerbotModule extends Module {
         if (System.currentTimeMillis() - seenAt < delay) return;
         if (p.getAttackStrengthScale(0.5f) < charge.getFloat()) return;
         if (onlyCrits.get() && canCrit(p) && !(p.fallDistance > 0 && !p.onGround())) return;
-        if (ModuleManager.CRITICALS.holdForJump(p)) return;
+        if (ModuleManager.CRITICALS.waiting()) return;   // a held-back crit hit is about to land
         mc.gameMode.attack(p, e);
         p.swing(InteractionHand.MAIN_HAND, p.getMainHandItem().getAttackAnimation(), false);
     }

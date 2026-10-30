@@ -9,10 +9,9 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
 
-/** Only renders the blocks you pick; everything else turns invisible (face culling in BlockMixin). */
+/** Only renders the blocks you pick; everything else turns invisible. Ores are drawn fully lit (LightmapMixin). */
 public final class XrayModule extends Module {
     private final BoolSetting coal, iron, copper, gold, redstone, lapis, diamond, emerald, debris, quartz, storage, spawners;
-    private final BoolSetting fullbright = bool("Fullbright", true).desc("Light everything up while Xray is on");
 
     private volatile Set<Block> targets = Set.of();
 
@@ -65,8 +64,6 @@ public final class XrayModule extends Module {
 
     public boolean isTarget(BlockState s) { return targets.contains(s.getBlock()); }
 
-    public boolean wantsFullbright() { return isEnabled() && fullbright.get(); }
-
     static void reloadWorld() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.levelExtractor != null) mc.levelExtractor.allChanged();
@@ -75,11 +72,5 @@ public final class XrayModule extends Module {
     @Override protected void onEnable() { rebuild(); reloadWorld(); }
 
     @Override
-    protected void onDisable() {
-        reloadWorld();
-        FullbrightModule.update(Minecraft.getInstance());
-    }
-
-    @Override
-    public void onTick(Minecraft mc) { FullbrightModule.update(mc); }
+    protected void onDisable() { reloadWorld(); }
 }

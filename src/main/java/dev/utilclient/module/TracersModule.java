@@ -1,6 +1,7 @@
 package dev.utilclient.module;
 
 import dev.utilclient.core.Friends;
+import dev.utilclient.render.WorldRender;
 import dev.utilclient.util.Draw;
 import dev.utilclient.util.Projection;
 import dev.utilclient.util.TargetFilter;
@@ -10,6 +11,8 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -47,9 +50,31 @@ public final class TracersModule extends Module {
         return TargetFilter.accept(e, p, players.get(), hostile.get(), passive.get(), false);
     }
 
+    private int colorFor(Minecraft mc, Entity e) {
+        if (colorMode.is("Distance")) {
+            float d = (float) Math.min(1.0, mc.player.distanceTo(e) / 60.0);
+            return Draw.hsv(d * 0.33f, 0.85f, 1f) & 0xFFFFFF;
+        }
+        return ModuleManager.ESP.colorOf(e);
+    }
+
+    @Override
+    public void renderWorld(WorldRender.Ctx ctx) {
+        Minecraft mc = Minecraft.getInstance();
+        for (Entity e : targets) {
+            if (e.isRemoved()) continue;
+            float pt = ctx.partialTick;
+            double x = Mth.lerp(pt, e.xOld, e.getX()), y = Mth.lerp(pt, e.yOld, e.getY()), z = Mth.lerp(pt, e.zOld, e.getZ());
+            double h = e.getBbHeight(), hw = e.getBbWidth() / 2.0;
+            int c = Draw.alpha(colorFor(mc, e), opacity.getInt());
+            ctx.tracer(new Vec3(x, y + h / 2.0, z), c);
+            if (boxes.get()) ctx.outline(new AABB(x - hw, y, z - hw, x + hw, y + h, z + hw), c);
+        }
+    }
+
     @Override
     public void renderHud(GuiGraphicsExtractor g, float pt) {
-        if (targets.isEmpty()) return;
+        if (targets.isEmpty() || WorldRender.active()) return;
         Minecraft mc = Minecraft.getInstance();
         Projection pr = new Projection(mc, g.guiWidth(), g.guiHeight());
         double[] o = new double[3];

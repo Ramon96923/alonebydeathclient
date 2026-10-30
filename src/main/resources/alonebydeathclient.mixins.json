@@ -6,18 +6,28 @@
   "client": [
     "BlockMixin",
     "CameraMixin",
+    "ClientPacketListenerEventsMixin",
     "ClientPacketListenerMixin",
     "EntityMixin",
     "EntityRendererMixin",
     "GameRendererMixin",
     "HudMixin",
     "KeyboardHandlerMixin",
+    "LevelRendererMixin",
+    "LightmapMixin",
+    "LivingEntityMixin",
     "LocalPlayerMixin",
     "MinecraftAccessor",
+    "MinecraftMixin",
+    "ModelBlockRendererMixin",
     "MouseHandlerMixin",
     "MultiPlayerGameModeMixin",
+    "PlayerMixin",
     "ScreenEffectRendererMixin",
-    "SetEntityMotionPacketMixin"
+    "SetEntityMotionPacketMixin",
+    "indigo.AltModelBlockRendererImplMixin"
   ],
-  "injectors": { "defaultRequire": 0 }
+  "injectors": {
+    "defaultRequire": 0
+  }
 }

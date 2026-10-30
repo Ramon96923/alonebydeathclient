@@ -19,6 +19,29 @@ public final class Draw {
         g.fill(x1 - 1, y0 + 1, x1, y1 - 1, color);
     }
 
+    /** Rounded rectangle. {@code top}/{@code bottom} choose which corners get rounded. */
+    public static void round(GuiGraphicsExtractor g, int x0, int y0, int x1, int y1, int r, int color, boolean top, boolean bottom) {
+        r = Math.min(r, Math.min((x1 - x0) / 2, (y1 - y0) / 2));
+        if (r <= 0) { rect(g, x0, y0, x1, y1, color); return; }
+        int midTop = y0 + (top ? r : 0), midBottom = y1 - (bottom ? r : 0);
+        if (midBottom > midTop) g.fill(x0, midTop, x1, midBottom, color);
+        for (int i = 0; i < r; i++) {
+            double dy = r - i - 0.5;
+            int inset = (int) Math.round(r - Math.sqrt(Math.max(0, r * r - dy * dy)));
+            if (top) g.fill(x0 + inset, y0 + i, x1 - inset, y0 + i + 1, color);
+            if (bottom) g.fill(x0 + inset, y1 - 1 - i, x1 - inset, y1 - i, color);
+        }
+    }
+
+    public static void round(GuiGraphicsExtractor g, int x0, int y0, int x1, int y1, int r, int color) {
+        round(g, x0, y0, x1, y1, r, color, true, true);
+    }
+
+    /** Fully rounded ends (switches, buttons). */
+    public static void pill(GuiGraphicsExtractor g, int x0, int y0, int x1, int y1, int color) {
+        round(g, x0, y0, x1, y1, (y1 - y0) / 2, color, true, true);
+    }
+
     public static void outline(GuiGraphicsExtractor g, int x0, int y0, int x1, int y1, int color) {
         g.fill(x0, y0, x1, y0 + 1, color);
         g.fill(x0, y1 - 1, x1, y1, color);

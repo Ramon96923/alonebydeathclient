@@ -1,6 +1,7 @@
 package dev.utilclient.module;
 
 import dev.utilclient.core.Friends;
+import dev.utilclient.render.WorldRender;
 import dev.utilclient.util.Draw;
 import dev.utilclient.util.Projection;
 import net.minecraft.client.Minecraft;
@@ -11,6 +12,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -90,9 +92,26 @@ public final class EspModule extends Module {
         boxed = out;
     }
 
+    private static AABB box(Entity e, float pt) {
+        double x = Mth.lerp(pt, e.xOld, e.getX()), y = Mth.lerp(pt, e.yOld, e.getY()), z = Mth.lerp(pt, e.zOld, e.getZ());
+        double hw = e.getBbWidth() / 2.0;
+        return new AABB(x - hw, y, z - hw, x + hw, y + e.getBbHeight(), z + hw);
+    }
+
+    @Override
+    public void renderWorld(WorldRender.Ctx ctx) {
+        if (mode.is("Glow")) return;
+        for (Entity e : boxed) {
+            if (e.isRemoved()) continue;
+            int rgb = colorOf(e);
+            ctx.box(box(e, ctx.partialTick), Draw.alpha(rgb, 40), Draw.alpha(rgb, 230));
+        }
+    }
+
     @Override
     public void renderHud(GuiGraphicsExtractor g, float pt) {
         if (mode.is("Glow") || boxed.isEmpty()) return;
+        boolean drawBoxes = !WorldRender.active();
         Minecraft mc = Minecraft.getInstance();
         Projection pr = new Projection(mc, g.guiWidth(), g.guiHeight());
         int[] r = new int[4];
@@ -102,9 +121,11 @@ public final class EspModule extends Module {
             double hw = e.getBbWidth() / 2.0, h = e.getBbHeight();
             if (!pr.boxRect(x - hw, y, z - hw, x + hw, y + h, z + hw, r)) continue;
             int c = 0xFF000000 | colorOf(e);
-            Draw.outline(g, r[0] - 1, r[1] - 1, r[2] + 1, r[3] + 1, 0x90000000);
-            Draw.outline(g, r[0], r[1], r[2], r[3], c);
-            Draw.outline(g, r[0] + 1, r[1] + 1, r[2] - 1, r[3] - 1, 0x90000000);
+            if (drawBoxes) {
+                Draw.outline(g, r[0] - 1, r[1] - 1, r[2] + 1, r[3] + 1, 0x90000000);
+                Draw.outline(g, r[0], r[1], r[2], r[3], c);
+                Draw.outline(g, r[0] + 1, r[1] + 1, r[2] - 1, r[3] - 1, 0x90000000);
+            }
             if (healthBar.get() && e instanceof LivingEntity le) {
                 float frac = Math.max(0f, Math.min(1f, le.getHealth() / Math.max(1f, le.getMaxHealth())));
                 int bx = r[0] - 4, top = r[1], bot = r[3];

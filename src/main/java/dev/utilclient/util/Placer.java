@@ -60,6 +60,41 @@ public final class Placer {
         return true;
     }
 
+    /** Blast-proof blocks for traps, surround and hole filling, best first. */
+    public static final net.minecraft.world.item.Item[] BLAST_PROOF = {
+            net.minecraft.world.item.Items.OBSIDIAN, net.minecraft.world.item.Items.CRYING_OBSIDIAN,
+            net.minecraft.world.item.Items.ENDER_CHEST, net.minecraft.world.item.Items.NETHERITE_BLOCK};
+
+    /** Hotbar slot of the first blast-proof block, or -1. */
+    public static int blastProofSlot(LocalPlayer p) {
+        for (net.minecraft.world.item.Item item : BLAST_PROOF) {
+            int s = Inv.hotbar(p, item);
+            if (s >= 0) return s;
+        }
+        return -1;
+    }
+
+    /**
+     * Places up to {@code max} of the targets (in order) with the block in hotbar {@code slot}, switching to
+     * it for the placements and straight back. Earlier placements count as support for later ones.
+     * @return how many blocks were placed
+     */
+    public static int placeBatch(Minecraft mc, java.util.List<BlockPos> targets, int slot, int max, String rotate) {
+        LocalPlayer p = mc.player;
+        if (p == null || slot < 0) return 0;
+        int prev = Inv.selected(p);
+        int placed = 0;
+        boolean switched = false;
+        for (BlockPos pos : targets) {
+            if (placed >= max) break;
+            if (!canPlaceAt(mc, pos)) continue;
+            if (!switched) { Inv.select(p, slot); switched = true; }
+            if (place(mc, pos, InteractionHand.MAIN_HAND, rotate, true)) placed++;
+        }
+        if (switched) Inv.select(p, prev);
+        return placed;
+    }
+
     /** Right-clicks a block face (anchors, chests...). */
     public static void interact(Minecraft mc, BlockPos pos, Direction face, InteractionHand hand, String rotate) {
         LocalPlayer p = mc.player;

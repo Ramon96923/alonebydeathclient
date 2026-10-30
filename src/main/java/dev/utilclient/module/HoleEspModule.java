@@ -1,5 +1,6 @@
 package dev.utilclient.module;
 
+import dev.utilclient.render.WorldRender;
 import dev.utilclient.util.Draw;
 import dev.utilclient.util.Projection;
 import net.minecraft.client.Minecraft;
@@ -9,6 +10,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,8 +54,19 @@ public final class HoleEspModule extends Module {
     }
 
     @Override
+    public void renderWorld(WorldRender.Ctx ctx) {
+        double h = Math.max(0.02, height.get());
+        for (Hole hole : holes) {
+            BlockPos b = hole.pos;
+            int c = (hole.bedrock ? bedrockColor.get() : obsidianColor.get()) & 0xFFFFFF;
+            AABB box = new AABB(b.getX(), b.getY(), b.getZ(), b.getX() + 1.0, b.getY() + h, b.getZ() + 1.0);
+            ctx.box(box, Draw.alpha(c, 55), Draw.alpha(c, 230));
+        }
+    }
+
+    @Override
     public void renderHud(GuiGraphicsExtractor g, float pt) {
-        if (holes.isEmpty()) return;
+        if (holes.isEmpty() || WorldRender.active()) return;
         Projection pr = new Projection(Minecraft.getInstance(), g.guiWidth(), g.guiHeight());
         double[][] p = new double[8][3];
         double h = height.get();

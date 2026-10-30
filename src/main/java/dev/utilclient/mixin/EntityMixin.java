@@ -13,4 +13,10 @@ public abstract class EntityMixin {
     private void abd$glow(CallbackInfoReturnable<Boolean> cir) {
         if (ModuleManager.ESP.shouldGlow((Entity) (Object) this)) cir.setReturnValue(true);
     }
+
+    @Inject(method = "getPickRadius", at = @At("RETURN"), cancellable = true)
+    private void abd$hitbox(CallbackInfoReturnable<Float> cir) {
+        float extra = ModuleManager.HITBOX.extraFor((Entity) (Object) this);
+        if (extra > 0f) cir.setReturnValue(cir.getReturnValue() + extra);
+    }
 }

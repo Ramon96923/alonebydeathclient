@@ -46,7 +46,7 @@ import java.util.Set;
  */
 public class ClickGui extends Screen {
     // ---- layout constants ----------------------------------------------------------------------
-    private static final int HEADER_H = 17, MODULE_H = 15, ROW_H = 13, SLIDER_H = 18, PICKER_H = 66;
+    private static final int HEADER_H = 15, MODULE_H = 13, ROW_H = 12, SLIDER_H = 16, PICKER_H = 62;
 
     // ---- colours -------------------------------------------------------------------------------
     private static final int PANEL_BG = 0x0E0E14, TEXT = 0xFFEDEDF4, DIM = 0xFF8C8CA0, MUTED = 0xFF5C5C70;
@@ -102,9 +102,28 @@ public class ClickGui extends Screen {
     private int clipTop, clipBottom;
     private int panelIndex;
 
-    public ClickGui() {
+    private final Screen parent;
+    /** GUI scale and the screen size in scaled units. */
+    private float s = 1f;
+    private int vw, vh;
+
+    public ClickGui() { this(null); }
+
+    /** @param parent screen to return to (e.g. the title screen); null to close into the game */
+    public ClickGui(Screen parent) {
         super(Component.literal("AloneByDeath"));
+        this.parent = parent;
     }
+
+    private boolean inWorld() { return minecraft != null && minecraft.level != null; }
+
+    private void updateScale() {
+        s = hudEditor ? 1f : (float) theme().scale.get();
+        vw = (int) (width / s);
+        vh = (int) (height / s);
+    }
+
+    private int r() { return theme().radius.getInt(); }
 
     private static ClickGuiModule theme() { return ModuleManager.CLICK_GUI; }
 
@@ -115,18 +134,20 @@ public class ClickGui extends Screen {
     protected void init() {
         super.init();
         Fonts.verify();
+        if (!inWorld()) hudEditor = false;
+        updateScale();
         int x = 10, y = 26, rowH = 0;
         int pw = theme().panelWidth.getInt();
         for (Panel p : PANELS) {
             if (!p.placed) {
-                if (x + pw > width - 4) { x = 10; y += Math.max(150, rowH); }
+                if (x + pw > vw - 4) { x = 10; y += Math.max(150, rowH); }
                 p.x = x;
                 p.y = y;
                 p.placed = true;
                 x += pw + 8;
             }
-            p.x = Math.max(0, Math.min(p.x, width - 20));
-            p.y = Math.max(0, Math.min(p.y, height - HEADER_H));
+            p.x = Math.max(0, Math.min(p.x, vw - 20));
+            p.y = Math.max(0, Math.min(p.y, vh - HEADER_H));
         }
     }
 
@@ -196,6 +217,11 @@ public class ClickGui extends Screen {
 
     @Override
     public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+        if (!inWorld()) {
+            this.extractPanorama(g, delta);
+            g.fill(0, 0, width, height, 0x66000000);
+            return;
+        }
         switch (theme().background.get()) {
             case "Blur" -> super.extractBackground(g, mouseX, mouseY, delta);
             case "Dim" -> g.fill(0, 0, width, height, Draw.alpha(0x05050A, (int) (110 * openAnim)));
@@ -204,8 +230,20 @@ public class ClickGui extends Screen {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
-        super.extractRenderState(g, mx, my, delta);
+    public void extractRenderState(GuiGraphicsExtractor g, int rawX, int rawY, float delta) {
+        super.extractRenderState(g, rawX, rawY, delta);
+        updateScale();
+        int mx = (int) (rawX / s), my = (int) (rawY / s);
+        g.pose().pushMatrix();
+        g.pose().scale(s, s);
+        try {
+            renderScaled(g, mx, my);
+        } finally {
+            g.pose().popMatrix();
+        }
+    }
+
+    private void renderScaled(GuiGraphicsExtractor g, int mx, int my) {
         long now = System.nanoTime();
         dt = lastNanos == 0 ? 0f : Math.min(0.1f, (now - lastNanos) / 1e9f);
         lastNanos = now;
@@ -241,8 +279,8 @@ public class ClickGui extends Screen {
 
     private void updateDrags(int mx, int my) {
         if (dragPanel != null) {
-            dragPanel.x = Math.max(0, Math.min(mx - dragDX, width - theme().panelWidth.getInt()));
-            dragPanel.y = Math.max(0, Math.min(my - dragDY, height - HEADER_H));
+            dragPanel.x = Math.max(0, Math.min(mx - dragDX, vw - theme().panelWidth.getInt()));
+            dragPanel.y = Math.max(0, Math.min(my - dragDY, vh - HEADER_H));
         }
         if (dragSlider != null) dragSlider.setFraction((mx - sliderX) / (double) Math.max(1, sliderW));
         if (dragColor != null) {
@@ -255,7 +293,7 @@ public class ClickGui extends Screen {
                 default -> { }
             }
         }
-        if (dragElement != null) dragElement.moveTo(mx - elemDX, my - elemDY, width, height);
+        if (dragElement != null) dragElement.moveTo(mx - elemDX, my - elemDY, vw, vh);
     }
 
     private List<Module> modulesFor(Category c) {
@@ -280,22 +318,24 @@ public class ClickGui extends Screen {
         for (Module m : mods) if (m.isEnabled() && !m.isAlwaysOn()) enabled++;
         String title = p.cat.label;
         String count = p.cat == Category.CLIENT ? "" : enabled + "/" + mods.size();
+        boolean folded = p.openAnim <= 0.001f || p.contentH <= 0;
         switch (theme().headerStyle.get()) {
             case "Filled" -> {
-                Draw.soft(g, x, y, x + pw, y + HEADER_H, acc);
-                Fonts.text(g, title, x + 6, y + 4, 0xFFFFFFFF, true);
-                Fonts.text(g, count, x + pw - 6 - Fonts.width(count), y + 4, 0xC8FFFFFF);
+                Draw.round(g, x, y, x + pw, y + HEADER_H, r(), acc, true, folded);
+                Fonts.text(g, title, x + 6, y + 3, 0xFFFFFFFF, true);
+                Fonts.text(g, count, x + pw - 6 - Fonts.width(count), y + 3, 0xC8FFFFFF);
             }
             case "Underline" -> {
-                Draw.soft(g, x, y, x + pw, y + HEADER_H, Draw.alpha(0x16161F, Math.min(255, theme().panelAlpha() + 20)));
-                g.fill(x, y + HEADER_H - 1, x + pw, y + HEADER_H, acc);
-                Fonts.text(g, title, x + 6, y + 4, 0xFFFFFFFF, true);
-                Fonts.text(g, count, x + pw - 6 - Fonts.width(count), y + 4, DIM);
+                Draw.round(g, x, y, x + pw, y + HEADER_H, r(), Draw.alpha(0x16161F, Math.min(255, theme().panelAlpha() + 20)), true, folded);
+                int inset = folded ? r() : 0;
+                g.fill(x + inset, y + HEADER_H - 1, x + pw - inset, y + HEADER_H, acc);
+                Fonts.text(g, title, x + 6, y + 3, 0xFFFFFFFF, true);
+                Fonts.text(g, count, x + pw - 6 - Fonts.width(count), y + 3, DIM);
             }
             default -> {
-                Draw.soft(g, x, y, x + pw, y + HEADER_H, Draw.alpha(0x16161F, Math.min(255, theme().panelAlpha() + 20)));
-                Fonts.text(g, title, x + 6, y + 4, acc, true);
-                Fonts.text(g, count, x + pw - 6 - Fonts.width(count), y + 4, DIM);
+                Draw.round(g, x, y, x + pw, y + HEADER_H, r(), Draw.alpha(0x16161F, Math.min(255, theme().panelAlpha() + 20)), true, folded);
+                Fonts.text(g, title, x + 6, y + 3, acc, true);
+                Fonts.text(g, count, x + pw - 6 - Fonts.width(count), y + 3, DIM);
             }
         }
         hits.add(new Hit(x, y, x + pw, y + HEADER_H, Type.HEADER, null, p));
@@ -309,14 +349,14 @@ public class ClickGui extends Screen {
         int bodyH = (int) (Math.min(p.contentH, maxH) * ease(p.openAnim));
         int top = y + HEADER_H;
         int bottom = top + bodyH;
+        int pad = Math.max(2, r() - 2);   // room for the rounded corners below the last row
         p.bx0 = x;
         p.by0 = y;
         p.bx1 = x + pw;
-        p.by1 = bottom + 2;
+        p.by1 = bottom + pad;
 
         if (bodyH > 0) {
-            g.fill(x, top, x + pw, bottom, panelBg());
-            g.fill(x + 1, bottom, x + pw - 1, bottom + 1, panelBg());
+            Draw.round(g, x, top, x + pw, bottom + pad, r(), panelBg(), false, true);
             hits.add(new Hit(x, top, x + pw, bottom, Type.BODY, null, p));
 
             float maxScroll = Math.max(0, p.contentH - maxH);
@@ -370,13 +410,13 @@ public class ClickGui extends Screen {
             hoverDescription = m.description;
         }
         int textColor = Draw.mix(DIM, 0xFFFFFFFF, on);
-        Fonts.text(g, m.name, x + 7, y + 3, textColor);
+        Fonts.text(g, m.name, x + 7, y + 2, textColor);
 
         boolean expanded = EXPANDED.contains(m.name);
         String right = expanded ? "-" : "+";
         if (listening == m) right = "...";
         else if (theme().showBinds.get() && m.key >= 0) right = Keys.name(m.key) + "  " + right;
-        Fonts.text(g, right, x + pw - 6 - Fonts.width(right), y + 3, listening == m ? acc : MUTED);
+        Fonts.text(g, right, x + pw - 6 - Fonts.width(right), y + 2, listening == m ? acc : MUTED);
 
         if (inClip(y, y + MODULE_H)) hits.add(new Hit(x, y, x + pw, y + MODULE_H, Type.MODULE, m, null));
         y += MODULE_H;
@@ -433,20 +473,20 @@ public class ClickGui extends Screen {
             if (s instanceof BoolSetting b) {
                 float t = approach(b, b.get() ? 1f : 0f, 8f);
                 Fonts.text(g, Fonts.fit(s.name, iw - 22), ix, y + 2, Draw.mix(DIM, TEXT, t));
-                int sx = x + pw - 22, sy = y + 3;
-                Draw.soft(g, sx, sy, sx + 15, sy + 7, Draw.mix(TRACK, acc, t));
+                int sx = x + pw - 22, sy = y + 2;
+                Draw.pill(g, sx, sy, sx + 16, sy + 8, Draw.mix(TRACK, acc, t));
                 int kx = sx + 1 + (int) (8 * ease(t));
-                g.fill(kx, sy + 1, kx + 5, sy + 6, 0xFFFFFFFF);
+                Draw.pill(g, kx, sy + 1, kx + 6, sy + 7, 0xFFFFFFFF);
                 if (inClip(y, y + h)) hits.add(new Hit(x, y, x + pw, y + h, Type.SETTING, s, null));
             } else if (s instanceof NumberSetting n) {
                 String v = n.valueText();
                 Fonts.text(g, Fonts.fit(s.name, iw - Fonts.width(v) - 6), ix, y + 2, TEXT);
                 Fonts.text(g, v, x + pw - 6 - Fonts.width(v), y + 2, acc);
-                int bx = ix, bw = x + pw - 6 - ix, by = y + 13;
-                g.fill(bx, by, bx + bw, by + 2, TRACK);
+                int bx = ix, bw = x + pw - 6 - ix, by = y + 12;
+                Draw.pill(g, bx, by, bx + bw, by + 2, TRACK);
                 int fw = (int) (bw * n.fraction());
-                g.fill(bx, by, bx + fw, by + 2, acc);
-                g.fill(bx + fw - 1, by - 1, bx + fw + 1, by + 3, 0xFFFFFFFF);
+                if (fw > 1) Draw.pill(g, bx, by, bx + fw, by + 2, acc);
+                Draw.pill(g, bx + fw - 2, by - 1, bx + fw + 2, by + 3, 0xFFFFFFFF);
                 if (inClip(y, y + h)) hits.add(new Hit(x, y, x + pw, y + h, Type.SLIDER, new int[] {bx, bw}, null));
                 if (inClip(y, y + h)) hits.add(new Hit(x, y, x + pw, y + h, Type.SETTING, s, null));
             } else if (s instanceof ModeSetting md) {
@@ -457,8 +497,8 @@ public class ClickGui extends Screen {
             } else if (s instanceof ColorSetting c) {
                 Fonts.text(g, Fonts.fit(s.name, iw - 24), ix, y + 2, TEXT);
                 int sx = x + pw - 18;
-                Draw.outline(g, sx - 1, y + 2, sx + 12, y + 11, 0x80FFFFFF);
-                g.fill(sx, y + 3, sx + 11, y + 10, c.get() | 0xFF000000);
+                Draw.round(g, sx - 1, y + 1, sx + 12, y + 11, 3, 0x80FFFFFF);
+                Draw.round(g, sx, y + 2, sx + 11, y + 10, 3, c.get() | 0xFF000000);
                 if (inClip(y, y + ROW_H)) hits.add(new Hit(x, y, x + pw, y + ROW_H, Type.SETTING, s, null));
                 if (h > ROW_H) renderPicker(g, c, ix, y + ROW_H, x + pw - 6 - ix, h - ROW_H);
             }
@@ -523,9 +563,9 @@ public class ClickGui extends Screen {
     private void renderTopBar(GuiGraphicsExtractor g, int mx, int my) {
         int acc = accent(0f);
         // search box
-        int sw = 170, sx = width / 2 - sw / 2, sy = 5, sh = 15;
-        Draw.soft(g, sx, sy, sx + sw, sy + sh, Draw.alpha(0x0E0E14, 225));
-        g.fill(sx + 1, sy + sh - 1, sx + sw - 1, sy + sh, search.isEmpty() ? Draw.withAlpha(acc, 0.35f) : acc);
+        int sw = 170, sx = vw / 2 - sw / 2, sy = 5, sh = 15;
+        Draw.round(g, sx, sy, sx + sw, sy + sh, r(), Draw.alpha(0x0E0E14, 225));
+        Draw.round(g, sx + 3, sy + sh - 1, sx + sw - 3, sy + sh, 0, search.isEmpty() ? Draw.withAlpha(acc, 0.35f) : acc);
         if (search.isEmpty()) {
             Fonts.text(g, hudEditor ? "HUD editor: drag elements" : "Type to search...", sx + 6, sy + 4, MUTED);
         } else {
@@ -535,22 +575,23 @@ public class ClickGui extends Screen {
             hits.add(new Hit(sx + sw - 14, sy, sx + sw, sy + sh, Type.SEARCH, null, null));
         }
 
-        // HUD editor button
+        // HUD editor button (needs a world to show the HUD)
+        if (!inWorld()) return;
         String label = hudEditor ? "Back to modules" : "HUD Editor";
-        int bw = Fonts.width(label) + 14, bx = width - bw - 6, by = 5;
+        int bw = Fonts.width(label) + 14, bx = vw - bw - 6, by = 5;
         boolean hover = mx >= bx && mx < bx + bw && my >= by && my < by + sh;
-        Draw.soft(g, bx, by, bx + bw, by + sh, hudEditor ? acc : Draw.alpha(0x0E0E14, hover ? 245 : 215));
+        Draw.round(g, bx, by, bx + bw, by + sh, r(), hudEditor ? acc : Draw.alpha(0x0E0E14, hover ? 245 : 215));
         Fonts.text(g, label, bx + 7, by + 4, 0xFFFFFFFF);
         hits.add(new Hit(bx, by, bx + bw, by + sh, Type.HUD_BUTTON, null, null));
         if (hover) hoverDescription = hudEditor ? "Return to the module panels" : "Move HUD elements around the screen";
     }
 
     private void renderDescription(GuiGraphicsExtractor g, String text) {
-        String t = Fonts.fit(text, width - 40);
+        String t = Fonts.fit(text, vw - 40);
         int w = Fonts.width(t) + 14, h = 15;
-        int x = width / 2 - w / 2, y = height - h - 6;
-        Draw.soft(g, x, y, x + w, y + h, Draw.alpha(0x0E0E14, 235));
-        g.fill(x + 1, y + h - 1, x + w - 1, y + h, accent(0f));
+        int x = vw / 2 - w / 2, y = vh - h - 6;
+        Draw.round(g, x, y, x + w, y + h, r(), Draw.alpha(0x0E0E14, 235));
+        Draw.round(g, x + 4, y + h - 1, x + w - 4, y + h, 0, accent(0f));
         Fonts.text(g, t, x + 7, y + 4, TEXT);
     }
 
@@ -558,13 +599,13 @@ public class ClickGui extends Screen {
         HudModule hud = ModuleManager.HUD;
         int acc = accent(0f);
         // centre guides
-        g.fill(width / 2, 0, width / 2 + 1, height, 0x22FFFFFF);
-        g.fill(0, height / 2, width, height / 2 + 1, 0x22FFFFFF);
+        g.fill(vw / 2, 0, vw / 2 + 1, vh, 0x22FFFFFF);
+        g.fill(0, vh / 2, vw, vh / 2 + 1, 0x22FFFFFF);
 
         if (!hud.isEnabled()) {
             String msg = "The HUD module is off - click here to turn it on";
-            int w = Fonts.width(msg) + 16, x = width / 2 - w / 2, y = height / 2 - 30;
-            Draw.soft(g, x, y, x + w, y + 18, Draw.alpha(0x0E0E14, 235));
+            int w = Fonts.width(msg) + 16, x = vw / 2 - w / 2, y = vh / 2 - 30;
+            Draw.round(g, x, y, x + w, y + 18, r(), Draw.alpha(0x0E0E14, 235));
             Fonts.text(g, msg, x + 8, y + 5, TEXT);
             hits.add(new Hit(x, y, x + w, y + 18, Type.HUD_ENABLE, null, null));
         } else {
@@ -581,20 +622,20 @@ public class ClickGui extends Screen {
 
         // element toggles
         int pw = 120, x = 10, y = 26;
-        Draw.soft(g, x, y, x + pw, y + HEADER_H, acc);
-        Fonts.text(g, "HUD elements", x + 6, y + 4, 0xFFFFFFFF, true);
+        Draw.round(g, x, y, x + pw, y + HEADER_H, r(), acc, true, false);
+        Fonts.text(g, "HUD elements", x + 6, y + 3, 0xFFFFFFFF, true);
         int cy = y + HEADER_H;
-        g.fill(x, cy, x + pw, cy + hud.elements.size() * ROW_H + 4, panelBg());
+        Draw.round(g, x, cy, x + pw, cy + hud.elements.size() * ROW_H + 4, r(), panelBg(), false, true);
         cy += 2;
         for (HudModule.Element e : hud.elements) {
             boolean hover = mx >= x && mx < x + pw && my >= cy && my < cy + ROW_H;
             if (hover) g.fill(x, cy, x + pw, cy + ROW_H, HOVER);
             float t = approach(e.on, e.on.get() ? 1f : 0f, 8f);
             Fonts.text(g, e.id, x + 6, cy + 2, Draw.mix(DIM, TEXT, t));
-            int sx = x + pw - 22, sy = cy + 3;
-            Draw.soft(g, sx, sy, sx + 15, sy + 7, Draw.mix(TRACK, acc, t));
+            int sx = x + pw - 22, sy = cy + 2;
+            Draw.pill(g, sx, sy, sx + 16, sy + 8, Draw.mix(TRACK, acc, t));
             int kx = sx + 1 + (int) (8 * ease(t));
-            g.fill(kx, sy + 1, kx + 5, sy + 6, 0xFFFFFFFF);
+            Draw.pill(g, kx, sy + 1, kx + 6, sy + 7, 0xFFFFFFFF);
             hits.add(new Hit(x, cy, x + pw, cy + ROW_H, Type.ELEMENT_TOGGLE, e, null));
             cy += ROW_H;
         }
@@ -624,7 +665,7 @@ public class ClickGui extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        double mx = event.x(), my = event.y();
+        double mx = event.x() / s, my = event.y() / s;
         int button = event.button();
         boolean left = button == InputConstants.MOUSE_BUTTON_LEFT;
         boolean right = button == InputConstants.MOUSE_BUTTON_RIGHT;
@@ -745,7 +786,8 @@ public class ClickGui extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mx, double my, double scrollX, double scrollY) {
+    public boolean mouseScrolled(double rawX, double rawY, double scrollX, double scrollY) {
+        double mx = rawX / s, my = rawY / s;
         if (!hudEditor) {
             for (int i = PANELS.size() - 1; i >= 0; i--) {
                 Panel p = PANELS.get(i);
@@ -755,7 +797,7 @@ public class ClickGui extends Screen {
                 }
             }
         }
-        return super.mouseScrolled(mx, my, scrollX, scrollY);
+        return super.mouseScrolled(rawX, rawY, scrollX, scrollY);
     }
 
     @Override
@@ -803,7 +845,8 @@ public class ClickGui extends Screen {
     public void onClose() {
         ModuleManager.HUD.editing = false;
         Config.save();
-        super.onClose();
+        if (parent != null) minecraft.gui.setScreen(parent);
+        else super.onClose();
     }
 
     @Override

@@ -1,5 +1,6 @@
 package dev.utilclient.module;
 
+import dev.utilclient.render.WorldRender;
 import dev.utilclient.util.Draw;
 import dev.utilclient.util.Projection;
 import net.minecraft.client.Minecraft;
@@ -24,7 +25,11 @@ public final class BlockEspModule extends Module {
     private final List<Kind> kinds = new ArrayList<>();
     private final NumberSetting range = num("Range", 32, 8, 64, 4).unit("m");
     private final NumberSetting maxBoxes = num("Max boxes", 150, 20, 500, 10);
-    private final ModeSetting style = mode("Style", "Both", "Fill", "Outline", "Both");
+    private final ModeSetting style = mode("Style", "Outline", "Fill", "Outline", "Both");
+    private final NumberSetting fillAlpha = num("Fill opacity", 22, 5, 150, 5).visible(() -> !style.is("Outline"));
+    private final BoolSetting merge = bool("Merge veins", true)
+            .desc("Draw clustered ores as a clean wireframe instead of overlapping filled blobs");
+    private final BoolSetting fade = bool("Fade with distance", true).desc("Far blocks are drawn fainter");
     private final BoolSetting tracers = bool("Tracers", false);
 
     private final Map<Block, Kind> lookup = new IdentityHashMap<>();
@@ -100,9 +105,48 @@ public final class BlockEspModule extends Module {
         }
     }
 
+    private float fadeFor(BlockPos b, net.minecraft.world.phys.Vec3 cam) {
+        if (!fade.get()) return 1f;
+        double d = Math.sqrt(b.distToCenterSqr(cam));
+        double r = range.get();
+        return (float) Math.max(0.25, Math.min(1.0, 1.0 - (d - r * 0.5) / (r * 0.5)));
+    }
+
+    /** Packed key for a block position, for the merge lookup. */
+    private static long key(int x, int y, int z) {
+        return ((long) (x & 0x3FFFFFF) << 38) | ((long) (z & 0x3FFFFFF) << 12) | (y & 0xFFF);
+    }
+
+    @Override
+    public void renderWorld(WorldRender.Ctx ctx) {
+        boolean fill = !style.is("Outline"), outline = !style.is("Fill");
+        java.util.Set<Long> set = null;
+        if (merge.get() && fill) {
+            set = new java.util.HashSet<>(found.size() * 2);
+            for (Found f : found) set.add(key(f.pos.getX(), f.pos.getY(), f.pos.getZ()));
+        }
+        for (Found f : found) {
+            float a = fadeFor(f.pos, ctx.cam);
+            int rgb = f.argb & 0xFFFFFF;
+            var box = WorldRender.block(f.pos);
+            // In a vein, skip the fill so the cluster reads as a clean wireframe, not an opaque blob.
+            boolean clustered = set != null && hasNeighbour(set, f.pos);
+            if (fill && !clustered) ctx.fill(box, Draw.alpha(rgb, (int) (fillAlpha.getInt() * a)));
+            if (outline) ctx.outline(box, Draw.alpha(rgb, (int) (235 * a)));
+            if (tracers.get()) ctx.tracer(box.getCenter(), Draw.alpha(rgb, (int) (170 * a)));
+        }
+    }
+
+    private static boolean hasNeighbour(java.util.Set<Long> set, BlockPos p) {
+        int x = p.getX(), y = p.getY(), z = p.getZ();
+        return set.contains(key(x + 1, y, z)) || set.contains(key(x - 1, y, z))
+                || set.contains(key(x, y + 1, z)) || set.contains(key(x, y - 1, z))
+                || set.contains(key(x, y, z + 1)) || set.contains(key(x, y, z - 1));
+    }
+
     @Override
     public void renderHud(GuiGraphicsExtractor g, float pt) {
-        if (found.isEmpty()) return;
+        if (found.isEmpty() || WorldRender.active()) return;
         Minecraft mc = Minecraft.getInstance();
         Projection pr = new Projection(mc, g.guiWidth(), g.guiHeight());
         int[] rect = new int[4];
@@ -111,7 +155,7 @@ public final class BlockEspModule extends Module {
         for (Found f : found) {
             BlockPos b = f.pos;
             if (pr.boxRect(b.getX(), b.getY(), b.getZ(), b.getX() + 1, b.getY() + 1, b.getZ() + 1, rect)) {
-                if (fill) g.fill(rect[0], rect[1], rect[2], rect[3], Draw.withAlpha(f.argb, 0.25f));
+                if (fill) g.fill(rect[0], rect[1], rect[2], rect[3], Draw.alpha(f.argb, fillAlpha.getInt()));
                 if (outline) Draw.outline(g, rect[0], rect[1], Math.max(rect[2], rect[0] + 2), Math.max(rect[3], rect[1] + 2), f.argb | 0xFF000000);
             }
             if (tracers.get()) {

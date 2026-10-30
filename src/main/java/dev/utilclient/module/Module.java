@@ -105,6 +105,9 @@ public abstract class Module {
     /** Called every frame on the HUD layer while enabled. */
     public void renderHud(GuiGraphicsExtractor g, float partialTick) {}
 
+    /** Called every frame after the world renders, for 3D boxes and lines (see WorldRender). */
+    public void renderWorld(dev.utilclient.render.WorldRender.Ctx ctx) {}
+
     /** Extra state to persist beyond settings (HUD positions etc.). */
     public JsonObject saveExtra() { return null; }
 

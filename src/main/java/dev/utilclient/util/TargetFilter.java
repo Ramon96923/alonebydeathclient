@@ -24,6 +24,7 @@ public final class TargetFilter {
         if (e == p || !(e instanceof LivingEntity le) || !le.isAlive() || le.isDeadOrDying() || e.isSpectator()) return false;
         if (!invisibles && e.isInvisible()) return false;
         if (Friends.isFriend(e)) return false;
+        if (dev.utilclient.module.ModuleManager.ANTI_BOT.isBot(e)) return false;
         if (sparePets && EntityClass.isProtected(e)) return false;
         return switch (EntityClass.of(e)) {
             case PLAYER -> players;

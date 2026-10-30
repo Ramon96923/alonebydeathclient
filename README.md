@@ -20,6 +20,21 @@ Turn the card off under Client > ClickGUI > *Main menu card*.
 - **HUD Editor** (top right) lets you drag HUD elements and switch them on or off.
 - Theme settings are under Client > ClickGUI: accent colour, gradient or rainbow, header style (Kami or Lambda), **GUI scale** (the menu is smaller by default now) and **corner radius** (rounded panels, switches and buttons), panel width, opacity, background dim or blur, custom font, text shadow, animation speed, and more.
 
+## Macros (great for DonutSMP)
+- `.macro add /home` then press a key: that key now runs `/home`. Plain text works too (it's sent as chat).
+- Chain commands with `&&`, e.g. `.macro add /sell && /ah` (sent a moment apart).
+- `.macro donut` walks you through binding `/sell`, `/ah`, `/home`, `/spawn`, `/shop`, `/rtp`, `/orders`, `/bal` (Esc skips one).
+- `.macro list`, `.macro del <number>`, `.macro clear`.
+
+## Base finding & visuals
+- **StorageESP** outlines every chest, barrel, shulker and ender chest in your render distance, and its *Stash finder* tells you in chat when a chunk holds lots of storage.
+- **Freecam** flies the camera through walls while your body stays put (WASD, Space/Shift, mouse).
+- **GlintColor** recolours enchantment glint (11 colours including rainbow).
+- **Fonts**: ClickGUI > *Font* picks Inter (default), Poppins, Manrope, JetBrains Mono or Outfit.
+
+## Staying unbanned
+AutoHit now defaults to **Smooth** rotations (your view turns naturally and it only swings once you're facing the target), a 3.1 block reach, no hitting through walls and a small random miss chance. Velocity defaults to taking 85% knockback instead of none, **AntiBot** (on by default) skips the invisible bots anticheats use to catch kill auras, and Criticals' default never sends fake packets. Blatant modules (Flight, Speed, packet modes) can still be caught on strict servers.
+
 ## Saving
 Everything saves automatically to `.minecraft/config/alonebydeathclient/config.json`: module toggles, settings, binds, panel and HUD positions, friends and the command prefix.
 
@@ -42,11 +57,11 @@ Everything saves automatically to `.minecraft/config/alonebydeathclient/config.j
 | `.gui` | Open the click GUI |
 
 ## Modules
-- **Combat:** AutoHit (kill aura), Triggerbot, AutoClicker, Aimbot, Criticals, Hitbox, OldPvP, Mace, Spear, AutoTotem, AutoCrystal, AutoAnchor, Surround, AutoArmor, AutoWeapon, AutoTrap, SelfTrap, HoleFiller, AutoLog
+- **Combat:** AutoHit (kill aura), Triggerbot, AutoClicker, Aimbot, Criticals, Hitbox, OldPvP, Mace, Spear, AutoTotem, AutoCrystal, AutoAnchor, Surround, AutoArmor, AutoWeapon, AutoTrap, SelfTrap, HoleFiller, AutoLog, ShieldBreaker, AutoPot, AntiBot
 - **Movement:** Sprint, AutoWalk, Step, NoFall, Velocity, ElytraFly, Flight, Speed, Jesus, Scaffold
-- **Render:** ESP, Nametags, Tracers, BlockESP, HoleESP, Tracker, Xray, Fullbright, Zoom, NoRender, LogoutSpots, Breadcrumbs
+- **Render:** ESP, Nametags, Tracers, BlockESP, HoleESP, Tracker, Xray, Fullbright, Zoom, NoRender, LogoutSpots, Breadcrumbs, Freecam, StorageESP, GlintColor
 - **Player:** AutoMine, AutoPlace, AutoTool, AutoEat, FastPlace, AutoRespawn, AutoMend, ChestStealer
-- **Misc:** FakePlayer, MiddleClickFriend, AntiAFK, AutoReconnect, VisualRange, PopCounter
+- **Misc:** FakePlayer, MiddleClickFriend, AntiAFK, AutoReconnect, VisualRange, PopCounter, Macros
 - **Client:** ClickGUI, HUD, Notifications
 
 ### 26.3 combat (works with the crystal modules)
@@ -92,4 +107,4 @@ This client is licensed under the **GNU GPL v3.0** (see `LICENSE.txt`), because 
 - The **Xray / Fullbright** render hooks (`LightmapMixin`, `ModelBlockRendererMixin`, the Indigo mixin) and the **Spear** / **AutoReconnect** approaches are adapted from **[Meteor Client](https://github.com/MeteorDevelopment/meteor-client)** (GPL-3.0), with ideas also from **[LiquidBounce](https://github.com/CCBlueX/LiquidBounce)** (GPL-3.0).
 - The GUI design takes inspiration from **Kami** and **Lambda**.
 - Ported files carry an attribution header; everything else is original to this project.
-- The bundled UI font is **Outfit** by the Outfit Project Authors, under the SIL Open Font License 1.1 (see `assets/alonebydeathclient/font/Outfit-OFL.txt`).
+- Bundled UI fonts: **Inter**, **Poppins**, **Manrope**, **JetBrains Mono** (from Google Fonts) and **Outfit** by the Outfit Project Authors, under the SIL Open Font License 1.1 (licence files are in `assets/alonebydeathclient/font/`).

@@ -3,6 +3,7 @@ package dev.utilclient.core;
 import dev.utilclient.UtilClient;
 import dev.utilclient.module.Category;
 import dev.utilclient.module.Module;
+import dev.utilclient.module.MacrosModule;
 import dev.utilclient.module.ModuleManager;
 import dev.utilclient.module.Setting;
 import net.minecraft.client.Minecraft;
@@ -59,6 +60,7 @@ public final class Commands {
             case "hclip" -> clip(a, false);
             case "gui", "clickgui" -> UtilClient.openGuiNextTick();
             case "font" -> font(a);
+            case "macro", "macros", "m" -> macro(a);
             default -> Chat.error("Unknown command '" + cmd + "'. Type " + prefix + "help");
         }
     }
@@ -80,6 +82,8 @@ public final class Commands {
         Chat.info(p + "vclip <blocks> / hclip <blocks>  -  teleport up/forward");
         Chat.info(p + "font on|off  -  custom GUI font");
         Chat.info(p + "gui  -  open the click GUI");
+        Chat.info(p + "macro add <command>  -  bind a command to a key (chain with &&)");
+        Chat.info(p + "macro list | del <number> | clear | donut  -  manage macros / DonutSMP presets");
     }
 
     private static Module module(String[] a, int i) {
@@ -217,6 +221,34 @@ public final class Commands {
             p.setPos(p.getX() - Math.sin(yaw) * d, p.getY(), p.getZ() + Math.cos(yaw) * d);
         }
         Chat.info("Teleported " + d + " blocks.");
+    }
+
+    private static void macro(String[] a) {
+        var mm = ModuleManager.MACROS;
+        String sub = a.length == 0 ? "list" : a[0].toLowerCase(Locale.ROOT);
+        switch (sub) {
+            case "add" -> {
+                need(a, 2, "macro add <command or message>");
+                mm.startBinding(String.join(" ", Arrays.copyOfRange(a, 1, a.length)));
+            }
+            case "list" -> {
+                if (mm.macros().isEmpty()) { Chat.info("No macros. Try " + prefix + "macro add /home"); return; }
+                for (int i = 0; i < mm.macros().size(); i++) {
+                    var m = mm.macros().get(i);
+                    Chat.info((i + 1) + ". " + Keys.name(m.key()) + "  ->  " + m.text());
+                }
+            }
+            case "del", "remove", "rm" -> {
+                need(a, 2, "macro del <number>");
+                Chat.info(mm.remove(Integer.parseInt(a[1]) - 1) ? "Macro removed." : "No macro with that number.");
+            }
+            case "clear" -> { mm.clear(); Chat.info("All macros removed."); }
+            case "donut" -> {
+                Chat.info("Binding DonutSMP commands one by one. Press a key for each, or Esc to skip.");
+                for (String c : MacrosModule.DONUT) mm.startBinding(c);
+            }
+            default -> Chat.error("usage: " + prefix + "macro add|list|del|clear|donut");
+        }
     }
 
     private static void need(String[] a, int n, String usage) {

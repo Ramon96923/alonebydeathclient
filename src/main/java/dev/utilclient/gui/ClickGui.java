@@ -817,6 +817,15 @@ public class ClickGui extends Screen {
             if (!search.isEmpty()) search = search.substring(0, search.length() - 1);
             return true;
         }
+        // Type-to-search from key presses: 26.3's SDL input only sends typed characters while a vanilla
+        // text box is focused, so charTyped alone never fires on this screen.
+        char typed = typedChar(key);
+        if (typed != 0 && key != UtilClient.guiKey()) {
+            addSearch(typed);
+            lastTyped = typed;
+            lastTypedAt = System.currentTimeMillis();
+            return true;
+        }
         if (key == InputConstants.KEY_ESCAPE) {
             if (!search.isEmpty()) { search = ""; return true; }
             if (hudEditor) { hudEditor = false; ModuleManager.HUD.editing = false; return true; }
@@ -834,11 +843,32 @@ public class ClickGui extends Screen {
     public boolean charTyped(CharacterEvent event) {
         if (listening != null) return true;
         int cp = event.codepoint();
-        if (cp >= 32 && !Character.isISOControl(cp) && search.length() < 24) {
-            search += new String(Character.toChars(cp));
-            for (Panel p : PANELS) p.scrollTarget = 0;
-        }
+        if (cp < 32 || Character.isISOControl(cp)) return true;
+        // the same key was already handled in keyPressed: don't type it twice
+        if (Character.toLowerCase(cp) == lastTyped && System.currentTimeMillis() - lastTypedAt < 250) return true;
+        String str = new String(Character.toChars(cp));
+        for (char c : str.toCharArray()) addSearch(c);
         return true;
+    }
+
+    private char lastTyped;
+    private long lastTypedAt;
+
+    private void addSearch(char c) {
+        if (search.length() >= 24) return;
+        search += Character.toLowerCase(c);
+        for (Panel p : PANELS) p.scrollTarget = 0;
+    }
+
+    /** Letter/digit/space for a key code, from the key's display name (works with any layout); 0 if none. */
+    private static char typedChar(int key) {
+        if (key == InputConstants.KEY_SPACE) return ' ';
+        String n = Keys.name(key);
+        if (n != null && n.length() == 1) {
+            char c = Character.toLowerCase(n.charAt(0));
+            if (Character.isLetterOrDigit(c)) return c;
+        }
+        return 0;
     }
 
     @Override

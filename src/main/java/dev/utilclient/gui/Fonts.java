@@ -22,27 +22,44 @@ public final class Fonts {
     private static final Logger LOG = Logger.getLogger("alonebydeathclient");
 
     private static Style regular, bold;
-    private static boolean initDone, broken;
+    private static String family;                       // which family regular/bold belong to
+    private static final java.util.Set<String> BROKEN = new java.util.HashSet<>();
     private static int checks;
 
     private Fonts() {}
 
     private static Font font() { return Minecraft.getInstance().font; }
 
+    /** Font-file base name for the family picked in ClickGUI > Font (null = vanilla). */
+    private static String fileFor(String choice) {
+        return switch (choice) {
+            case "Inter" -> "ui_inter";
+            case "Poppins" -> "ui_poppins";
+            case "Manrope" -> "ui_manrope";
+            case "JetBrains Mono" -> "ui_jetbrains";
+            case "Outfit" -> "ui";
+            default -> null;
+        };
+    }
+
     /** True when text should use the custom font. */
     public static boolean custom() {
-        if (broken || !ModuleManager.CLICK_GUI.customFont.get()) return false;
-        if (!initDone) init();
+        if (!ModuleManager.CLICK_GUI.customFont.get()) return false;
+        String want = fileFor(ModuleManager.CLICK_GUI.font.get());
+        if (want == null || BROKEN.contains(want)) return false;
+        if (!want.equals(family)) load(want);
         return regular != null;
     }
 
-    private static void init() {
-        initDone = true;
+    private static void load(String base) {
+        family = base;
+        checks = 0;
         try {
-            regular = styleFor(Identifier.fromNamespaceAndPath("alonebydeathclient", "ui"));
-            bold = styleFor(Identifier.fromNamespaceAndPath("alonebydeathclient", "ui_bold"));
+            regular = styleFor(Identifier.fromNamespaceAndPath("alonebydeathclient", base));
+            bold = styleFor(Identifier.fromNamespaceAndPath("alonebydeathclient", base + "_bold"));
         } catch (Throwable t) {
-            LOG.warning("Custom font unavailable, using the vanilla font: " + t);
+            LOG.warning("Font " + base + " unavailable, using the vanilla font: " + t);
+            BROKEN.add(base);
             regular = bold = null;
         }
     }
@@ -82,17 +99,17 @@ public final class Fonts {
      * draw "iiiiiiii" as wide as "WWWWWWWW", so that tells us whether to fall back.
      */
     public static void verify() {
-        if (broken || regular == null || checks > 20) return;
+        if (regular == null || family == null || checks > 20) return;
         checks++;
         try {
             int thin = font().width(Component.literal("iiiiiiii").setStyle(regular));
             int wide = font().width(Component.literal("WWWWWWWW").setStyle(regular));
             if (thin > 0 && thin == wide) {
-                broken = true;
+                BROKEN.add(family);
                 LOG.warning("Custom font did not load (resource problem?), using the vanilla font");
             }
         } catch (Throwable t) {
-            broken = true;
+            BROKEN.add(family);
         }
     }
 

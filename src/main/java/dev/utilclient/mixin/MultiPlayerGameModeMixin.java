@@ -20,6 +20,7 @@ public abstract class MultiPlayerGameModeMixin {
         try {
             if (ModuleManager.AUTO_WEAPON.isEnabled()) ModuleManager.AUTO_WEAPON.beforeAttack(target);
             if (ModuleManager.SPEAR.isEnabled()) ModuleManager.SPEAR.beforeAttack(target);
+            if (ModuleManager.SHIELD_BREAKER.isEnabled()) ModuleManager.SHIELD_BREAKER.beforeAttack(target);
             if (ModuleManager.MACE.isEnabled()) ModuleManager.MACE.beforeAttack(target);
             if (ModuleManager.CRITICALS.isEnabled() && ModuleManager.CRITICALS.beforeAttack(target)) ci.cancel();
         } catch (Throwable ignored) {

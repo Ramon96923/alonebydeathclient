@@ -56,19 +56,41 @@ public final class MainMenu {
             }
         });
 
+        // backup path; the main one is onMousePress() from MouseHandlerMixin
         ScreenMouseEvents.allowMouseClick(screen).register((s, event) -> {
             if (!enabled() || event.button() != 0) return true;
-            double x = event.x(), y = event.y();
-            if (inside(x, y, guiX0, guiY0, guiX1, guiY1)) {
-                Minecraft.getInstance().gui.setScreen(new ClickGui(s));
-                return false;
-            }
-            if (inside(x, y, spX0, spY0, spX1, spY1)) {
-                openSpotify();
-                return false;
-            }
-            return true;
+            return !click(s, event.x(), event.y());
         });
+    }
+
+    private static long lastClick;
+
+    /** Runs the button under (x, y), if any. @return true if a button was clicked */
+    private static boolean click(Screen s, double x, double y) {
+        long now = System.currentTimeMillis();
+        if (now - lastClick < 200) return inside(x, y, guiX0, guiY0, guiX1, guiY1) || inside(x, y, spX0, spY0, spX1, spY1);
+        if (inside(x, y, guiX0, guiY0, guiX1, guiY1)) {
+            lastClick = now;
+            Minecraft.getInstance().gui.setScreen(new ClickGui(s));
+            return true;
+        }
+        if (inside(x, y, spX0, spY0, spX1, spY1)) {
+            lastClick = now;
+            openSpotify();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Left mouse press, straight from MouseHandler (before the screen sees it).
+     * @return true if one of the card's buttons took the click
+     */
+    public static boolean onMousePress() {
+        Minecraft mc = Minecraft.getInstance();
+        if (!enabled() || !(mc.gui.screen() instanceof net.minecraft.client.gui.screens.TitleScreen s)) return false;
+        double x = mc.mouseHandler.getScaledXPos(mc.getWindow()), y = mc.mouseHandler.getScaledYPos(mc.getWindow());
+        return click(s, x, y);
     }
 
     public static void openSpotify() {

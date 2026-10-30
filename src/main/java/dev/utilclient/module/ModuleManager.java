@@ -39,6 +39,9 @@ public final class ModuleManager {
     public static final SelfTrapModule SELF_TRAP = new SelfTrapModule();
     public static final HoleFillerModule HOLE_FILLER = new HoleFillerModule();
     public static final AutoLogModule AUTO_LOG = new AutoLogModule();
+    public static final ShieldBreakerModule SHIELD_BREAKER = new ShieldBreakerModule();
+    public static final AutoPotModule AUTO_POT = new AutoPotModule();
+    public static final AntiBotModule ANTI_BOT = new AntiBotModule();
     // movement
     public static final SprintModule SPRINT = new SprintModule();
     public static final AutoWalkModule AUTO_WALK = new AutoWalkModule();
@@ -63,6 +66,9 @@ public final class ModuleManager {
     public static final NoRenderModule NO_RENDER = new NoRenderModule();
     public static final LogoutSpotsModule LOGOUT_SPOTS = new LogoutSpotsModule();
     public static final BreadcrumbsModule BREADCRUMBS = new BreadcrumbsModule();
+    public static final FreecamModule FREECAM = new FreecamModule();
+    public static final StorageEspModule STORAGE_ESP = new StorageEspModule();
+    public static final GlintColorModule GLINT_COLOR = new GlintColorModule();
     // player
     public static final AutoMineModule AUTO_MINE = new AutoMineModule();
     public static final AutoPlaceModule AUTO_PLACE = new AutoPlaceModule();
@@ -79,17 +85,18 @@ public final class ModuleManager {
     public static final AutoReconnectModule AUTO_RECONNECT = new AutoReconnectModule();
     public static final VisualRangeModule VISUAL_RANGE = new VisualRangeModule();
     public static final PopCounterModule POP_COUNTER = new PopCounterModule();
+    public static final MacrosModule MACROS = new MacrosModule();
 
     public static final List<Module> ALL = List.of(
             CLICK_GUI, HUD, NOTIFICATIONS,
             AUTO_HIT, TRIGGERBOT, AUTO_CLICKER, AIMBOT, CRITICALS, HITBOX, OLD_PVP, MACE, SPEAR,
             AUTO_TOTEM, AUTO_CRYSTAL, AUTO_ANCHOR, SURROUND, AUTO_ARMOR, AUTO_WEAPON,
-            AUTO_TRAP, SELF_TRAP, HOLE_FILLER, AUTO_LOG,
+            AUTO_TRAP, SELF_TRAP, HOLE_FILLER, AUTO_LOG, SHIELD_BREAKER, AUTO_POT, ANTI_BOT,
             SPRINT, AUTO_WALK, STEP, NO_FALL, VELOCITY, ELYTRA_FLY, FLIGHT, SPEED, JESUS, SCAFFOLD,
             ESP, NAMETAGS, TRACERS, BLOCK_ESP, HOLE_ESP, TRACKER, XRAY, FULLBRIGHT, ZOOM, NO_RENDER,
-            LOGOUT_SPOTS, BREADCRUMBS,
+            LOGOUT_SPOTS, BREADCRUMBS, FREECAM, STORAGE_ESP, GLINT_COLOR,
             AUTO_MINE, AUTO_PLACE, AUTO_TOOL, AUTO_EAT, FAST_PLACE, AUTO_RESPAWN, AUTO_MEND, CHEST_STEALER,
-            FAKE_PLAYER, MIDDLE_CLICK_FRIEND, ANTI_AFK, AUTO_RECONNECT, VISUAL_RANGE, POP_COUNTER);
+            FAKE_PLAYER, MIDDLE_CLICK_FRIEND, ANTI_AFK, AUTO_RECONNECT, VISUAL_RANGE, POP_COUNTER, MACROS);
 
     static {
         for (Module m : ALL) m.addMeta();
@@ -205,6 +212,8 @@ public final class ModuleManager {
         Minecraft mc = Minecraft.getInstance();
         if (key == InputConstants.UNKNOWN.getValue()) return;
 
+        if (MACROS.capture(key, action)) return;   // ".macro add": this key press binds a macro
+
         if (bindTarget != null && action == InputConstants.PRESS) {
             Module m = bindTarget;
             bindTarget = null;
@@ -220,6 +229,7 @@ public final class ModuleManager {
         }
 
         if (mc.gui == null || mc.gui.screen() != null || mc.player == null) return;
+        if (action == InputConstants.PRESS) MACROS.onKeyPress(key);
         for (Module m : ALL) {
             if (m.key != key || m.isAlwaysOn()) continue;
             boolean hold = m.bindMode != null && m.bindMode.is("Hold");

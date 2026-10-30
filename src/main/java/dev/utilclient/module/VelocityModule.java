@@ -4,8 +4,8 @@ import net.minecraft.world.phys.Vec3;
 
 /** Cuts knockback from hits and explosions down to a percentage. Applied by the packet mixins. */
 public final class VelocityModule extends Module {
-    private final NumberSetting horizontal = num("Horizontal", 0, 0, 100, 5).unit("%");
-    private final NumberSetting vertical = num("Vertical", 0, 0, 100, 5).unit("%");
+    private final NumberSetting horizontal = num("Horizontal", 85, 0, 100, 5).unit("%").desc("Knockback you still take. 0 is easy for anticheats to spot; 80-90 is safer");
+    private final NumberSetting vertical = num("Vertical", 100, 0, 100, 5).unit("%");
     private final BoolSetting explosions = bool("Explosions", true).desc("Also reduce crystal/TNT knockback");
 
     private Vec3 before;

@@ -50,7 +50,7 @@ public final class AutoCrystalModule extends Module {
     private final BoolSetting place = bool("Place", true);
     private final NumberSetting placeRange = num("Place range", 4.5, 1, 6, 0.1).unit("m").visible(place::get);
     private final NumberSetting placeWallRange = num("Place wall range", 3.0, 0, 6, 0.1).unit("m").visible(place::get);
-    private final NumberSetting placeDelay = num("Place delay", 1, 0, 10, 1).unit("t").visible(place::get);
+    private final NumberSetting placeDelay = num("Place delay", 2, 0, 10, 1).unit("t").visible(place::get);
     private final BoolSetting oldPlace = bool("1.12 placement", false)
             .desc("Require 2 air blocks above (old servers)").visible(place::get);
     private final ModeSetting switchMode = mode("Switch", "Silent", "None", "Normal", "Silent")
@@ -58,7 +58,7 @@ public final class AutoCrystalModule extends Module {
     // break
     private final BoolSetting breakCrystals = bool("Break", true);
     private final NumberSetting breakRange = num("Break range", 4.5, 1, 6, 0.1).unit("m").visible(breakCrystals::get);
-    private final NumberSetting breakDelay = num("Break delay", 0, 0, 10, 1).unit("t").visible(breakCrystals::get);
+    private final NumberSetting breakDelay = num("Break delay", 1, 0, 10, 1).unit("t").visible(breakCrystals::get);
     private final BoolSetting breakAny = bool("Break any", false)
             .desc("Break crystals you didn't place too (still damage-checked)").visible(breakCrystals::get);
     // misc

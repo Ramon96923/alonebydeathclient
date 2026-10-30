@@ -18,8 +18,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /** Kill-aura style: picks targets itself and attacks them in range. Great for mob farms. */
 public final class AutoHitModule extends Module {
-    private final NumberSetting range = num("Range", 3.6, 2.0, 6.0, 0.1).unit("m");
-    private final NumberSetting wallRange = num("Wall range", 3.0, 0.0, 6.0, 0.1).unit("m")
+    private final NumberSetting range = num("Range", 3.1, 2.0, 6.0, 0.1).unit("m");
+    private final NumberSetting wallRange = num("Wall range", 0.0, 0.0, 6.0, 0.1).unit("m")
             .desc("Range for targets behind blocks (0 = never hit through walls)");
     private final ModeSetting priority = mode("Priority", "Distance", "Distance", "Health", "Angle");
     private final ModeSetting targetMode = mode("Target mode", "Single", "Single", "Switch")
@@ -35,8 +35,15 @@ public final class AutoHitModule extends Module {
             .desc("How charged the swing must be").visible(() -> timing.is("Cooldown"));
     private final NumberSetting minCps = num("Min CPS", 8, 1, 20, 1).visible(() -> timing.is("CPS"));
     private final NumberSetting maxCps = num("Max CPS", 12, 1, 20, 1).visible(() -> timing.is("CPS"));
-    private final ModeSetting rotate = mode("Rotate", "Packet", "None", "Packet", "Client")
-            .desc("Packet: server sees you look at the target, your view stays put");
+    private final ModeSetting rotate = mode("Rotate", "Smooth", "Smooth", "Packet", "Client", "None")
+            .desc("Smooth: turns your view naturally and only hits when facing the target (hardest to detect). "
+                    + "Packet: instant server-side snap (easy to flag)");
+    private final NumberSetting turnSpeed = num("Turn speed", 25, 5, 90, 5).unit("°/t")
+            .desc("Smooth: how fast your view turns").visible(() -> rotate.is("Smooth"));
+    private final NumberSetting hitAngle = num("Hit angle", 20, 5, 90, 5).unit("°")
+            .desc("Smooth: only swing when the target is this close to your crosshair").visible(() -> rotate.is("Smooth"));
+    private final NumberSetting missChance = num("Miss chance", 4, 0, 30, 1).unit("%")
+            .desc("Sometimes swing and miss, like a human");
     private final BoolSetting onlyWeapon = bool("Only with weapon", false);
     private final BoolSetting pauseOnUse = bool("Pause while using", true).desc("Don't attack while eating or blocking");
     private final BoolSetting swing = bool("Swing", true);
@@ -74,11 +81,20 @@ public final class AutoHitModule extends Module {
         if (target == null) return;
         CombatState.target(target);
 
+        // Smooth: keep tracking every tick, so the view is already on target when the swing is charged
+        double angleLeft = rotate.is("Smooth")
+                ? Rotations.turnToward(p, target.getBoundingBox().getCenter(), turnSpeed.getFloat()) : 0;
         if (!ready(p)) return;
         if (ModuleManager.CRITICALS.waiting()) return;   // a held-back crit hit is about to land
+        if (angleLeft > hitAngle.get()) return;          // not facing them yet
 
         Vec3 aim = Rotations.aimPoint(target, p.getEyePosition(), "Closest");
-        Rotations.face(mc, aim, rotate.get());
+        if (!rotate.is("Smooth")) Rotations.face(mc, aim, rotate.get());
+        if (ThreadLocalRandom.current().nextInt(100) < missChance.getInt()) {
+            p.swing(InteractionHand.MAIN_HAND, p.getMainHandItem().getAttackAnimation(), false);
+            scheduleNext();
+            return;
+        }
         mc.gameMode.attack(p, target);
         if (swing.get()) p.swing(InteractionHand.MAIN_HAND, p.getMainHandItem().getAttackAnimation(), false);
         scheduleNext();

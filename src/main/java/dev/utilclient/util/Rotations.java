@@ -35,6 +35,23 @@ public final class Rotations {
         }
     }
 
+    /**
+     * Turns your real view toward a point by at most {@code maxStep} degrees (yaw and pitch each), with a
+     * little jitter so the motion isn't perfectly robotic. Returns the angle still left to turn, in degrees.
+     */
+    public static double turnToward(LocalPlayer p, Vec3 target, float maxStep) {
+        float[] want = angles(p.getEyePosition(), target);
+        float dYaw = Mth.wrapDegrees(want[0] - p.getYRot());
+        float dPitch = want[1] - p.getXRot();
+        float jitter = (float) (Math.random() - 0.5) * 0.6f;
+        float sy = Mth.clamp(dYaw, -maxStep, maxStep) + jitter;
+        float sp = Mth.clamp(dPitch, -maxStep * 0.7f, maxStep * 0.7f) + jitter * 0.5f;
+        p.setYRot(p.getYRot() + sy);
+        p.setXRot(Mth.clamp(p.getXRot() + sp, -90f, 90f));
+        float ry = dYaw - sy, rp = dPitch - sp;
+        return Math.sqrt(ry * ry + rp * rp);
+    }
+
     /** Where to aim on an entity: "Head", "Body", "Feet" or "Closest" (nearest point of its hitbox). */
     public static Vec3 aimPoint(Entity e, Vec3 eye, String where) {
         AABB b = e.getBoundingBox();

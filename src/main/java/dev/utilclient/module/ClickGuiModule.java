@@ -17,7 +17,9 @@ public final class ClickGuiModule extends Module {
     public final NumberSetting maxHeight = num("Max panel height", 300, 120, 600, 10).desc("Taller panels scroll");
     public final NumberSetting opacity = num("Panel opacity", 225, 60, 255, 5);
     public final ModeSetting background = mode("Background", "Dim", "Dim", "Blur", "None").desc("What happens behind the GUI");
-    public final BoolSetting customFont = bool("Custom font", true).desc("Use the bundled Outfit font (also: .font off)");
+    public final BoolSetting customFont = bool("Custom font", true).desc("Use a bundled font instead of Minecraft's (also: .font off)");
+    public final ModeSetting font = mode("Font", "Inter", "Inter", "Poppins", "Manrope", "JetBrains Mono", "Outfit")
+            .desc("Which bundled font the menus use").visible(customFont::get);
     public final NumberSetting fontOffset = num("Font Y offset", 0, -2, 2, 0.5).desc("Nudge the custom font up/down")
             .visible(customFont::get);
     public final BoolSetting textShadow = bool("Text shadow", false);

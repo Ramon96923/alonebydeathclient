@@ -14,6 +14,14 @@ public abstract class EntityMixin {
         if (ModuleManager.ESP.shouldGlow((Entity) (Object) this)) cir.setReturnValue(true);
     }
 
+    /** Freecam: the mouse turns the camera, not your player. */
+    @Inject(method = "turn", at = @At("HEAD"), cancellable = true)
+    private void abd$freecamTurn(double xo, double yo, org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+        if ((Object) this != net.minecraft.client.Minecraft.getInstance().player || !ModuleManager.FREECAM.active()) return;
+        ModuleManager.FREECAM.turn(xo, yo);
+        ci.cancel();
+    }
+
     @Inject(method = "getPickRadius", at = @At("RETURN"), cancellable = true)
     private void abd$hitbox(CallbackInfoReturnable<Float> cir) {
         float extra = ModuleManager.HITBOX.extraFor((Entity) (Object) this);

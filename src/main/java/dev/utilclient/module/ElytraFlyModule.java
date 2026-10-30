@@ -34,7 +34,8 @@ public final class ElytraFlyModule extends Module {
     public void onTick(Minecraft mc) {
         LocalPlayer p = mc.player;
         if (takeoffCooldown > 0) takeoffCooldown--;
-        if (!p.canGlide()) return;
+        if (!p.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST).is(net.minecraft.world.item.Items.ELYTRA)
+                || p.isPassenger()) return;
 
         if (!p.isFallFlying()) {
             if (instant.get() && mc.options.keyJump.isDown() && takeoffCooldown == 0) {

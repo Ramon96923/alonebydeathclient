@@ -18,6 +18,7 @@ public final class AutoClickerModule extends Module {
     private final BoolSetting requireWeapon = bool("Only with weapon", false);
 
     private long nextClick;
+    private double drift = 0.5;   // where in the CPS range we are; wanders slowly like a tiring hand
 
     public AutoClickerModule() { super("AutoClicker", "Auto left-click at a set CPS", Category.COMBAT); }
 
@@ -33,13 +34,18 @@ public final class AutoClickerModule extends Module {
         if (when.is("Always") && mc.hitResult != null && mc.hitResult.getType() == HitResult.Type.MISS) return;
 
         if (System.currentTimeMillis() < nextClick) return;
+        if (!dev.utilclient.util.Human.canClick()) return;
         if (mc instanceof MinecraftAccessor acc) acc.abd$startAttack();
+        if (dev.utilclient.util.Human.on()) dev.utilclient.util.Human.clicked();
         schedule();
     }
 
     private void schedule() {
         int lo = Math.min(minCps.getInt(), maxCps.getInt()), hi = Math.max(minCps.getInt(), maxCps.getInt());
-        int cps = lo == hi ? lo : ThreadLocalRandom.current().nextInt(lo, hi + 1);
-        nextClick = System.currentTimeMillis() + 1000L / Math.max(1, cps);
+        drift = Math.max(0, Math.min(1, drift + ThreadLocalRandom.current().nextGaussian() * 0.08));
+        double cps = lo + (hi - lo) * drift;
+        double mean = 1000.0 / Math.max(1, cps);
+        // real clicking has uneven gaps (and the odd quick double), not a fixed beat
+        nextClick = System.currentTimeMillis() + dev.utilclient.util.Human.delay(mean, mean * 0.3, mean * 0.35);
     }
 }

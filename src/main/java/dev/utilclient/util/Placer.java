@@ -54,10 +54,49 @@ public final class Placer {
         BlockPos support = pos.relative(d);
         Direction face = d.getOpposite();
         Vec3 hit = faceCenter(support, face);
-        Rotations.face(mc, hit, rotate);
-        mc.gameMode.useItemOn(p, hand, new BlockHitResult(hit, face, support, false));
+        BlockHitResult res = aimed(mc, support, face, hit, rotate, pos);
+        if (res == null) return false;
+        mc.gameMode.useItemOn(p, hand, res);
         if (swing) p.swing(hand, p.getItemInHand(hand).getInteractAnimation(), false);
+        if (Human.on()) Human.clicked();
         return true;
+    }
+
+    /**
+     * Gets the click ready. With the Humanizer on and Packet rotation, the server-side view is turned toward
+     * the block first and the click only happens once the rotation the server <i>already has</i> really
+     * points at it (otherwise the click arrives with the old rotation: an instant rotation-place flag).
+     * @param result the block that click must create/affect (null = the clicked block itself)
+     * @return the hit to send, or null to try again next tick
+     */
+    private static BlockHitResult aimed(Minecraft mc, BlockPos block, Direction face, Vec3 hit, String rotate, BlockPos result) {
+        LocalPlayer p = mc.player;
+        if (Human.on() && (!Human.canClick() || !Human.swapSettled())) {
+            if (!"None".equals(rotate) && !"Client".equals(rotate)) RotationManager.towards(p, hit, 40f);
+            return null;
+        }
+        if (!Human.on() || !"Packet".equals(rotate)) {
+            Rotations.face(mc, hit, rotate);
+            return new BlockHitResult(hit, face, block, false);
+        }
+        RotationManager.towards(p, hit, 40f);
+        Vec3 eye = p.getEyePosition();
+        BlockHitResult ray = mc.level.clip(new net.minecraft.world.level.ClipContext(eye,
+                eye.add(RotationManager.sentLook(p).scale(6)), net.minecraft.world.level.ClipContext.Block.OUTLINE,
+                net.minecraft.world.level.ClipContext.Fluid.NONE, p));
+        if (ray.getType() != net.minecraft.world.phys.HitResult.Type.BLOCK || !ray.getBlockPos().equals(block)) return null;
+        if (result != null && !block.relative(ray.getDirection()).equals(result)) return null;
+        return ray;
+    }
+
+    private static int restoreSlot = -1, batchTick;
+
+    /** End of every tick: give back the slot placeBatch borrowed, a moment after it's done. */
+    public static void tick(LocalPlayer p) {
+        if (restoreSlot < 0 || p == null) return;
+        if (Human.tick() - batchTick < 3 || !Human.swapSettled()) return;
+        Inv.select(p, restoreSlot);
+        restoreSlot = -1;
     }
 
     /** Blast-proof blocks for traps, surround and hole filling, best first. */
@@ -82,6 +121,23 @@ public final class Placer {
     public static int placeBatch(Minecraft mc, java.util.List<BlockPos> targets, int slot, int max, String rotate) {
         LocalPlayer p = mc.player;
         if (p == null || slot < 0) return 0;
+        if (Human.on()) {
+            // human way: hold the blocks, place one at a time, and switch back once there's nothing left to do
+            boolean work = false;
+            for (BlockPos pos : targets) if (canPlaceAt(mc, pos)) { work = true; break; }
+            if (!work) return 0;
+            batchTick = Human.tick();
+            if (Inv.selected(p) != slot) {
+                if (restoreSlot < 0) restoreSlot = Inv.selected(p);
+                Inv.select(p, slot);
+                return 0;
+            }
+            for (BlockPos pos : targets) {
+                if (!canPlaceAt(mc, pos)) continue;
+                return place(mc, pos, InteractionHand.MAIN_HAND, rotate, true) ? 1 : 0;   // one per tick
+            }
+            return 0;
+        }
         int prev = Inv.selected(p);
         int placed = 0;
         boolean switched = false;
@@ -96,12 +152,15 @@ public final class Placer {
     }
 
     /** Right-clicks a block face (anchors, chests...). */
-    public static void interact(Minecraft mc, BlockPos pos, Direction face, InteractionHand hand, String rotate) {
+    public static boolean interact(Minecraft mc, BlockPos pos, Direction face, InteractionHand hand, String rotate) {
         LocalPlayer p = mc.player;
-        if (p == null || mc.gameMode == null) return;
+        if (p == null || mc.gameMode == null) return false;
         Vec3 hit = faceCenter(pos, face);
-        Rotations.face(mc, hit, rotate);
-        mc.gameMode.useItemOn(p, hand, new BlockHitResult(hit, face, pos, false));
+        BlockHitResult res = aimed(mc, pos, face, hit, rotate, null);
+        if (res == null) return false;
+        mc.gameMode.useItemOn(p, hand, res);
         p.swing(hand, p.getItemInHand(hand).getInteractAnimation(), false);
+        if (Human.on()) Human.clicked();
+        return true;
     }
 }

@@ -86,12 +86,30 @@ Every HUD box follows Client > HUD > *Corner radius* (default 6) and *Background
 A custom DonutWaffen panorama (dusk sky with a giant donut and a waffle moon) and DonutWaffen splash texts replace the vanilla ones.
 
 ## Staying unbanned
-3.1 reworked how combat talks to the server (see `docs/CLIENT_NOTES.md` for the full table):
-- Silent rotations now ride in your normal movement packet instead of extra packets, and modules act at the start of the tick like real input.
-- **AutoCrystal** defaults to **Legit**: it turns your real view at a set speed and only places/breaks once your crosshair is actually on the block/crystal, one action per tick, with random delays and no same-tick slot swaps. *Silent* does the same server-side only; *Blatant* is the old instant mode for anarchy servers.
-- **AutoTotem** defaults to **Legit**: hotbar totems go to your offhand like pressing F; inventory clicks only happen with your inventory open.
+### Humanizer (Client > Humanizer, on by default)
+Every combat module goes through one shared set of "act like a person" rules:
+- **Mouse-step rotations**: each view change is a whole number of mouse steps for your sensitivity and goes through Minecraft's own mouse code, so sensitivity (GCD) checks pass.
+- **Natural aim**: turning speeds up, slows into the target and changes pace every few hundred ms. It aims at a slightly different spot each time (not the dead centre), with a tiny wobble.
+- **Silent rotations glide back** to where you're really looking instead of snapping there in one packet.
+- **Click budget**: all modules *plus your own clicks* share one CPS limit (default 13) and at most one action per tick, with uneven gaps.
+- **Reaction time** (default 150 ms): nothing reacts to a new target, a fresh crystal or a totem pop faster than a person.
+- **Swap settle**: a hotbar swap and a click never happen in the same tick.
+- **Rotate before you click**: blocks placed with *Packet* rotation (AutoAnchor, Surround, traps) wait until the server already has the right rotation, then click the exact point that rotation hits.
 
-AutoHit now defaults to **Smooth** rotations (your view turns naturally and it only swings once you're facing the target), a 3.1 block reach, no hitting through walls and a small random miss chance. Velocity defaults to taking 85% knockback instead of none, **AntiBot** (on by default) skips the invisible bots anticheats use to catch kill auras, and Criticals' default never sends fake packets. Blatant modules (Flight, Speed, packet modes) can still be caught on strict servers.
+What changed in the modules:
+- **AutoCrystal**:
+  - Delays are now in ms: *Place interval* 150, *Break interval* 120 and a new *Crystal age* 90 ms (it won't hit a crystal the tick it appears).
+  - Legit/Silent aim moves naturally, and actions only happen once the rotation the server has lines up.
+  - *Blatant* skips all of this (only for servers without an anticheat).
+- **CrystalMacro / AnchorMacro**: random gaps, crystal age, shared CPS, and the swap to crystals, glowstone or a totem gets its own tick before the click. This was a big instant-ban cause.
+- **AutoAnchor**: reaction time, ms gaps, waits for the server rotation, and swaps on a separate tick.
+- **AutoHit**: natural aim, only swings with your crosshair really on them (*Require crosshair*), a short random wait after the cooldown fills, and gaussian CPS.
+- **Triggerbot**: reaction 60–160 ms that clusters around the middle, plus a random post-cooldown delay.
+- **AutoClicker**: CPS drifts slowly within your range, with uneven gaps.
+- **Aimbot**: humanized by default and moves through the mouse path.
+- **AutoTotem Legit**: short reaction after a pop, and the F-swap steps land on random ticks.
+
+Old 3.1 rules still apply: rotations ride in the normal movement packet, modules act at the start of the tick, Velocity takes 85%, AntiBot is on and Criticals sends no fake packets. Blatant modes (Flight, Speed, packet Criticals, Mace spoof, Blatant AutoCrystal) can still be caught. For anarchy servers you can switch the Humanizer off to get the old instant speed back.
 
 ## Saving
 Everything saves automatically to `.minecraft/config/donutwaffen/config.json`: module toggles, settings, binds, panel and HUD positions, friends and the command prefix.

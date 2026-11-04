@@ -42,20 +42,24 @@ public final class AutoHitModule extends Module {
             .desc("Smooth: how fast your view turns").visible(() -> rotate.is("Smooth"));
     private final NumberSetting hitAngle = num("Hit angle", 20, 5, 90, 5).unit("°")
             .desc("Smooth: only swing when the target is this close to your crosshair").visible(() -> rotate.is("Smooth"));
+    private final BoolSetting needCrosshair = bool("Require crosshair", true)
+            .desc("Smooth: only swing when your crosshair is really on them, like a real click").visible(() -> rotate.is("Smooth"));
     private final NumberSetting missChance = num("Miss chance", 4, 0, 30, 1).unit("%")
             .desc("Sometimes swing and miss, like a human");
     private final BoolSetting onlyWeapon = bool("Only with weapon", false);
     private final BoolSetting pauseOnUse = bool("Pause while using", true).desc("Don't attack while eating or blocking");
     private final BoolSetting swing = bool("Swing", true);
 
-    private long nextClick;
+    private long nextClick, chargedAt;
     private Entity current;
+    private final dev.utilclient.util.Human.Aim aim = new dev.utilclient.util.Human.Aim();
+    private final dev.utilclient.util.Human.Reaction seen = new dev.utilclient.util.Human.Reaction();
 
     public AutoHitModule() { super("AutoHit", "Auto-attack nearby targets (kill aura)", Category.COMBAT); }
 
     @Override public String info() { return targetMode.get(); }
 
-    @Override protected void onDisable() { current = null; }
+    @Override protected void onDisable() { current = null; aim.reset(); seen.clear(); }
 
     static boolean isWeapon(ItemStack s) {
         return s.is(ItemTags.SWORDS) || s.is(ItemTags.AXES) || s.is(ItemTags.SPEARS) || s.is(Items.MACE) || s.is(Items.TRIDENT);
@@ -78,25 +82,33 @@ public final class AutoHitModule extends Module {
 
         Entity target = pick(mc);
         current = target;
-        if (target == null) return;
+        if (target == null) { aim.reset(); return; }
         CombatState.target(target);
+        boolean human = dev.utilclient.util.Human.on() && !rotate.is("Packet");
+        if (human && !seen.ready(target.getUUID())) return;   // notice the target first, like a person
 
         // Smooth: keep tracking every tick, so the view is already on target when the swing is charged
         double angleLeft = rotate.is("Smooth")
-                ? Rotations.turnToward(p, target.getBoundingBox().getCenter(), turnSpeed.getFloat()) : 0;
+                ? aim.turnView(p, aim.point(target, target.getBoundingBox().deflate(0.1)), turnSpeed.getFloat()) : 0;
         if (!ready(p)) return;
         if (ModuleManager.CRITICALS.waiting()) return;   // a held-back crit hit is about to land
         if (angleLeft > hitAngle.get()) return;          // not facing them yet
+        if (rotate.is("Smooth") && needCrosshair.get()
+                && !(mc.hitResult instanceof net.minecraft.world.phys.EntityHitResult eh && eh.getEntity() == target)) return;
+        if (human && !dev.utilclient.util.Human.canClick()) return;
 
         Vec3 aim = Rotations.aimPoint(target, p.getEyePosition(), "Closest");
         if (!rotate.is("Smooth")) Rotations.face(mc, aim, rotate.get());
         if (ThreadLocalRandom.current().nextInt(100) < missChance.getInt()) {
             p.swing(InteractionHand.MAIN_HAND, p.getMainHandItem().getAttackAnimation(), false);
+            if (human) dev.utilclient.util.Human.clicked();
             scheduleNext();
             return;
         }
         mc.gameMode.attack(p, target);
         if (swing.get()) p.swing(InteractionHand.MAIN_HAND, p.getMainHandItem().getAttackAnimation(), false);
+        if (human) dev.utilclient.util.Human.clicked();
+        chargedAt = 0;
         scheduleNext();
     }
 
@@ -114,14 +126,20 @@ public final class AutoHitModule extends Module {
     }
 
     private boolean ready(LocalPlayer p) {
-        if (timing.is("Cooldown")) return p.getAttackStrengthScale(0.5f) >= charge.getFloat();
+        if (timing.is("Cooldown")) {
+            if (p.getAttackStrengthScale(0.5f) < charge.getFloat()) { chargedAt = 0; return false; }
+            // people never hit on the exact tick the swing finishes charging
+            long now = System.currentTimeMillis();
+            if (chargedAt == 0) chargedAt = now + (dev.utilclient.util.Human.on() ? dev.utilclient.util.Human.delay(45, 30, 0) : 0);
+            return now >= chargedAt;
+        }
         return System.currentTimeMillis() >= nextClick;
     }
 
     private void scheduleNext() {
         if (!timing.is("CPS")) return;
         int lo = Math.min(minCps.getInt(), maxCps.getInt()), hi = Math.max(minCps.getInt(), maxCps.getInt());
-        int cps = lo == hi ? lo : ThreadLocalRandom.current().nextInt(lo, hi + 1);
-        nextClick = System.currentTimeMillis() + 1000L / Math.max(1, cps);
+        double cps = lo == hi ? lo : lo + ThreadLocalRandom.current().nextDouble() * (hi - lo);
+        nextClick = System.currentTimeMillis() + dev.utilclient.util.Human.delay(1000.0 / Math.max(1, cps));
     }
 }

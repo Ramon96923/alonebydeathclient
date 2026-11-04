@@ -110,9 +110,10 @@ public final class ModuleManager {
     public static final HotbarModule HOTBAR = new HotbarModule();
     public static final EffectsModule EFFECTS = new EffectsModule();
     public static final MusicModule MUSIC = new MusicModule();
+    public static final HumanizerModule HUMANIZER = new HumanizerModule();
 
     public static final List<Module> ALL = List.of(
-            CLICK_GUI, HUD, NOTIFICATIONS, MUSIC,
+            CLICK_GUI, HUD, NOTIFICATIONS, MUSIC, HUMANIZER,
             AUTO_HIT, TRIGGERBOT, AUTO_CLICKER, AIMBOT, CRITICALS, HITBOX, OLD_PVP, MACE, SPEAR,
             AUTO_TOTEM, AUTO_CRYSTAL, AUTO_ANCHOR, SURROUND, AUTO_ARMOR, AUTO_WEAPON,
             AUTO_TRAP, SELF_TRAP, HOLE_FILLER, AUTO_LOG, SHIELD_BREAKER, AUTO_POT, ANTI_BOT,
@@ -166,6 +167,12 @@ public final class ModuleManager {
 
     public static void tick(Minecraft mc) {
         if (mc.player == null || mc.level == null) return;
+        dev.utilclient.util.Human.onTick();
+        try {
+            dev.utilclient.util.Placer.tick(mc.player);
+        } catch (Throwable ignored) {
+            // cosmetic slot restore
+        }
         for (Module m : ALL) {
             if (!m.isEnabled()) continue;
             try {

@@ -16,6 +16,10 @@ public abstract class MouseHandlerMixin {
         if (action != InputConstants.PRESS) return;
         try {
             dev.utilclient.module.HudModule.onClick(info.button());   // keystrokes CPS
+            if ((info.button() == InputConstants.MOUSE_BUTTON_LEFT || info.button() == InputConstants.MOUSE_BUTTON_RIGHT)
+                    && net.minecraft.client.Minecraft.getInstance().gui.screen() == null) {
+                dev.utilclient.util.Human.userClick();   // your clicks share the Humanizer's CPS budget
+            }
             // title-screen card buttons (left click); swallow the click so vanilla doesn't also handle it
             // 26.3 uses SDL button numbers here, so compare with the constants, never 0/1
             if (info.button() == InputConstants.MOUSE_BUTTON_LEFT && dev.utilclient.gui.MainMenu.onMousePress()) { ci.cancel(); return; }

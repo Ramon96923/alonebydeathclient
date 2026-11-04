@@ -50,7 +50,8 @@ public final class AutoCrystalModule extends Module {
     private final BoolSetting place = bool("Place", true);
     private final NumberSetting placeRange = num("Place range", 4.2, 1, 6, 0.1).unit("m").visible(place::get);
     private final NumberSetting placeWallRange = num("Place wall range", 0.0, 0, 6, 0.1).unit("m").visible(place::get);
-    private final NumberSetting placeDelay = num("Place delay", 2, 0, 10, 1).unit("t").visible(place::get);
+    private final NumberSetting placeDelay = num("Place interval", 150, 0, 500, 10).unit("ms")
+            .desc("Average time between placements (randomised by the Humanizer)").visible(place::get);
     private final BoolSetting oldPlace = bool("1.12 placement", false)
             .desc("Require 2 air blocks above (old servers)").visible(place::get);
     private final ModeSetting switchMode = mode("Switch", "Silent", "None", "Normal", "Silent")
@@ -58,23 +59,29 @@ public final class AutoCrystalModule extends Module {
     // break
     private final BoolSetting breakCrystals = bool("Break", true);
     private final NumberSetting breakRange = num("Break range", 3.8, 1, 6, 0.1).unit("m").visible(breakCrystals::get);
-    private final NumberSetting breakDelay = num("Break delay", 1, 0, 10, 1).unit("t").visible(breakCrystals::get);
+    private final NumberSetting breakDelay = num("Break interval", 120, 0, 500, 10).unit("ms").visible(breakCrystals::get);
+    private final NumberSetting crystalAge = num("Crystal age", 90, 0, 300, 10).unit("ms")
+            .desc("Wait this long after a crystal appears before hitting it. Hitting on the very next tick, every time, "
+                    + "is a giveaway").visible(breakCrystals::get);
     private final BoolSetting breakAny = bool("Break any", false)
             .desc("Break crystals you didn't place too (still damage-checked)").visible(breakCrystals::get);
     // misc
     private final ModeSetting rotate = mode("Rotate", "Legit", "Legit", "Silent", "Blatant", "None")
             .desc("Legit: really turns your view and only acts once your crosshair is on it (safest). "
                     + "Silent: same aiming, server-side only. Blatant: instant, for anarchy servers without anticheat");
-    private final NumberSetting turnSpeed = num("Turn speed", 35, 5, 180, 5).unit("°/t")
+    private final NumberSetting turnSpeed = num("Turn speed", 30, 5, 180, 5).unit("°/t")
             .desc("Legit/Silent: how fast the aim moves").visible(() -> rotate.is("Legit") || rotate.is("Silent"));
-    private final BoolSetting jitter = bool("Random delays", true).desc("Add 0-1 ticks to every delay, so timing isn't machine-perfect");
     private final BoolSetting pauseOnEat = bool("Pause while eating", true);
     private final NumberSetting pauseHealth = num("Pause below HP", 0, 0, 36, 1).desc("0 = never pause");
     private final BoolSetting render = bool("Render", true);
     private final ColorSetting renderColor = color("Render colour", 0x80F43F5E).visible(render::get);
     private final BoolSetting renderDamage = bool("Show damage", true).visible(render::get);
 
-    private int placeTimer, breakTimer;
+    private long nextPlace, nextBreak;
+    private int lastActionTick = -1;
+    private final dev.utilclient.util.Human.Aim aim = new dev.utilclient.util.Human.Aim();
+    private final dev.utilclient.util.Human.Reaction seenTarget = new dev.utilclient.util.Human.Reaction();
+    private final dev.utilclient.util.Human.Reaction seenCrystal = new dev.utilclient.util.Human.Reaction();
     private BlockPos lastPlace;
     private float lastDamage;
     private long lastPlaceTime;
@@ -92,12 +99,29 @@ public final class AutoCrystalModule extends Module {
     protected void onDisable() {
         lastPlace = null;
         placedByUs.clear();
+        aim.reset();
+        seenTarget.clear();
+        seenCrystal.clear();
     }
 
     private boolean legitAim() { return rotate.is("Legit") || rotate.is("Silent"); }
 
-    private int delayTicks(NumberSetting d) {
-        return d.getInt() + (jitter.get() && java.util.concurrent.ThreadLocalRandom.current().nextBoolean() ? 1 : 0);
+    /** Humanized unless Blatant (Blatant is for servers without an anticheat). */
+    private boolean human() { return legitAim() && dev.utilclient.util.Human.on(); }
+
+    private long interval(NumberSetting ms) {
+        double m = ms.get();
+        return human() ? dev.utilclient.util.Human.delay(m, m * 0.25, m * 0.4) : (long) m;
+    }
+
+    private boolean mayAct() {
+        if (lastActionTick == dev.utilclient.util.Human.tick()) return false;   // one action per tick, always
+        return !human() || dev.utilclient.util.Human.canClick();
+    }
+
+    private void acted() {
+        lastActionTick = dev.utilclient.util.Human.tick();
+        if (human()) dev.utilclient.util.Human.clicked();
     }
 
     @Override
@@ -110,23 +134,26 @@ public final class AutoCrystalModule extends Module {
 
         LivingEntity target = (LivingEntity) TargetFilter.best(mc, targetRange.get(),
                 e -> TargetFilter.accept(e, p, players.get(), hostile.get(), passive.get(), true), priority.get());
-        if (breakTimer > 0) breakTimer--;
-        if (placeTimer > 0) placeTimer--;
+        long now = System.currentTimeMillis();
         if (target == null) {
-            if (System.currentTimeMillis() - lastPlaceTime > 1000) lastPlace = null;
+            if (now - lastPlaceTime > 1000) lastPlace = null;
+            aim.reset();
             return;
         }
         CombatState.target(target);
+        // a person needs a moment to notice a new target before doing anything
+        if (human() && !seenTarget.ready(target.getUUID())) return;
 
-        Entity crystal = breakCrystals.get() && breakTimer <= 0 ? findBreak(mc, p, target) : null;
+        Entity crystal = breakCrystals.get() && now >= nextBreak ? findBreak(mc, p, target) : null;
         if (!legitAim()) {
             // Blatant: instant, but still at most one action per tick and no extra rotation packets
+            if (!mayAct()) return;
             if (crystal != null) {
                 Rotations.face(mc, crystal.position(), rotate.is("None") ? "None" : "Packet");
                 hit(mc, p, crystal);
                 return;
             }
-            if (place.get() && placeTimer <= 0) {
+            if (place.get() && now >= nextPlace) {
                 BlockPos pos = findPlace(mc, p, target);
                 if (pos != null) {
                     Vec3 top = new Vec3(pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5);
@@ -137,27 +164,29 @@ public final class AutoCrystalModule extends Module {
             return;
         }
 
-        // Legit / Silent: turn toward the job, act only once the rotation the server already has lines up
+        // Legit / Silent: turn toward the job (naturally), act only once the rotation the server already
+        // has lines up, using the exact point that ray hits
         Vec3 eye = p.getEyePosition();
-        Vec3 look = rotate.is("Legit") ? p.getViewVector(1f) : dev.utilclient.util.RotationManager.sentLook(p);
+        Vec3 look = dev.utilclient.util.RotationManager.sentLook(p);
         if (crystal != null) {
-            aim(p, crystal.getBoundingBox().getCenter());
+            aim(p, aim.point(crystal, crystal.getBoundingBox().deflate(0.2)));
             double r = breakRange.get();
-            if (crystal.getBoundingBox().inflate(0.1).clip(eye, eye.add(look.scale(r))).isPresent()) hit(mc, p, crystal);
+            if (crystal.getBoundingBox().clip(eye, eye.add(look.scale(r))).isPresent() && mayAct()) hit(mc, p, crystal);
             return;
         }
-        if (!place.get() || placeTimer > 0) return;
+        if (!place.get() || now < nextPlace) return;
         BlockPos pos = findPlace(mc, p, target);
         if (pos == null) return;
-        aim(p, new Vec3(pos.getX() + 0.5, pos.getY() + 0.95, pos.getZ() + 0.5));
+        aim(p, aim.point(pos, new AABB(pos.getX() + 0.15, pos.getY() + 0.8, pos.getZ() + 0.15,
+                pos.getX() + 0.85, pos.getY() + 0.99, pos.getZ() + 0.85)));
         BlockHitResult ray = mc.level.clip(new ClipContext(eye, eye.add(look.scale(placeRange.get())),
                 ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, p));
         // place with the exact point your crosshair is on, like a real right-click
-        if (ray.getType() == HitResult.Type.BLOCK && ray.getBlockPos().equals(pos)) placeAt(mc, p, ray, pos, false);
+        if (ray.getType() == HitResult.Type.BLOCK && ray.getBlockPos().equals(pos) && mayAct()) placeAt(mc, p, ray, pos, false);
     }
 
     private void aim(LocalPlayer p, Vec3 point) {
-        if (rotate.is("Legit")) Rotations.turnToward(p, point, turnSpeed.getFloat());
+        if (rotate.is("Legit")) aim.turnView(p, point, turnSpeed.getFloat());
         else dev.utilclient.util.RotationManager.towards(p, point, turnSpeed.getFloat());
     }
 
@@ -182,6 +211,8 @@ public final class AutoCrystalModule extends Module {
         for (Entity e : mc.level.getEntities(p, p.getBoundingBox().inflate(r + 2), x -> x instanceof EndCrystal && x.isAlive())) {
             if (e.getBoundingBox().distanceToSqr(eye) > r * r) continue;
             if (legitAim() && !p.hasLineOfSight(e)) continue;
+            // react to a fresh crystal like a person, not on the very next tick
+            if (human() && !seenCrystal.ready(e.getId(), dev.utilclient.util.Human.delay(crystalAge.get(), crystalAge.get() * 0.3, crystalAge.get() * 0.5))) continue;
             if (!breakAny.get() && !placedByUs.contains(e.blockPosition().below()) && !placedByUs.isEmpty()) continue;
             float dmg = DamageCalc.crystal(target, e.position());
             float self = DamageCalc.crystal(p, e.position());
@@ -196,8 +227,8 @@ public final class AutoCrystalModule extends Module {
         mc.gameMode.attack(p, crystal);
         p.swing(InteractionHand.MAIN_HAND, p.getMainHandItem().getAttackAnimation(), false);
         placedByUs.remove(crystal.blockPosition().below());
-        breakTimer = delayTicks(breakDelay);
-        placeTimer = Math.max(placeTimer, 1);   // never place in the same tick as a break
+        acted();
+        nextBreak = System.currentTimeMillis() + interval(breakDelay);
     }
 
     // ---- place --------------------------------------------------------------------------------
@@ -242,9 +273,10 @@ public final class AutoCrystalModule extends Module {
         int prev = Inv.selected(p);
         if (crystalSlot >= 0) {
             Inv.select(p, crystalSlot);
-            // a legit player can't swap and click in the same tick: hold the crystals, place next tick
-            if (!allowSilent) { placeTimer = 1; return; }
+            // a legit player can't swap and click in the same tick: hold the crystals, place a bit later
+            if (!allowSilent) return;
         }
+        if (!allowSilent && !dev.utilclient.util.Human.swapSettled()) return;
         mc.gameMode.useItemOn(p, hand, hitResult);
         p.swing(hand, p.getItemInHand(hand).getInteractAnimation(), false);
         if (crystalSlot >= 0 && allowSilent && switchMode.is("Silent")) Inv.select(p, prev);
@@ -253,8 +285,8 @@ public final class AutoCrystalModule extends Module {
         if (placedByUs.size() > 64) placedByUs.clear();
         lastPlace = pos;
         lastPlaceTime = System.currentTimeMillis();
-        placeTimer = delayTicks(placeDelay);
-        breakTimer = Math.max(breakTimer, 1);   // and never break in the same tick as a place
+        acted();
+        nextPlace = lastPlaceTime + interval(placeDelay);
     }
 
     private boolean canCrystalGo(Minecraft mc, BlockPos base) {

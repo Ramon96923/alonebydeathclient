@@ -34,6 +34,7 @@ public final class AutoTotemModule extends Module {
     private int fStage, fPrev = -1;
 
     private int wait;
+    private long reactAt;   // humanized: when we may react to a missing totem
     private int lastCount;
 
     public AutoTotemModule() { super("AutoTotem", "Keep a totem in your offhand", Category.COMBAT); }
@@ -46,6 +47,7 @@ public final class AutoTotemModule extends Module {
         lastCount = Inv.count(p, Items.TOTEM_OF_UNDYING);
         if (p.isSpectator() || p.isCreative()) return;
         if (fStage == 1) {
+            if (!dev.utilclient.util.Human.swapSettled()) return;   // the slot change gets its own tick (or two)
             p.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerActionPacket(
                     net.minecraft.network.protocol.game.ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND,
                     net.minecraft.core.BlockPos.ZERO, net.minecraft.core.Direction.DOWN, 0));
@@ -53,10 +55,13 @@ public final class AutoTotemModule extends Module {
             return;
         }
         if (fStage == 2) {
+            // switching back isn't instant for a person either
+            if (dev.utilclient.util.Human.on() && java.util.concurrent.ThreadLocalRandom.current().nextInt(100) < 40) return;
             if (fPrev >= 0) Inv.select(p, fPrev);
             fStage = 0;
             fPrev = -1;
-            wait = delay.getInt() + 1;
+            reactAt = 0;
+            wait = delay.getInt() + 1 + (dev.utilclient.util.Human.on() && java.util.concurrent.ThreadLocalRandom.current().nextBoolean() ? 1 : 0);
             return;
         }
         if (wait > 0) { wait--; return; }
@@ -64,7 +69,14 @@ public final class AutoTotemModule extends Module {
         if (mc.gui.screen() != null && !inInventory.get()) return;
 
         Item want = danger(mc, p) ? Items.TOTEM_OF_UNDYING : safeItem();
-        if (want == null || p.getOffhandItem().is(want)) return;
+        if (want == null || p.getOffhandItem().is(want)) { reactAt = 0; return; }
+        if (method.is("Legit") && dev.utilclient.util.Human.on()) {
+            // nobody re-totems on the exact tick of a pop: wait a (short) human reaction first
+            long now = System.currentTimeMillis();
+            if (reactAt == 0) reactAt = now + dev.utilclient.util.Human.delay(dev.utilclient.module.ModuleManager.HUMANIZER.reactionMs() * 0.8,
+                    35, 60);
+            if (now < reactAt) return;
+        }
         int slot = find(p, want);
         if (slot < 0 && want != Items.TOTEM_OF_UNDYING) {
             // no safe item left: fall back to a totem rather than an empty hand

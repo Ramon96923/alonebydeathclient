@@ -28,10 +28,11 @@ public final class AimbotModule extends Module {
     private final BoolSetting sticky = bool("Sticky", true).desc("Stay on the current target while it's valid");
     private final BoolSetting vertical = bool("Vertical", true).desc("Also adjust pitch");
     private final BoolSetting onlyAttacking = bool("Only while attacking", false).desc("Only aim while attack is held");
-    private final BoolSetting humanize = bool("Humanize", false).desc("Tiny random jitter");
+    private final BoolSetting humanize = bool("Humanize", true).desc("Natural speed changes, a moving aim spot and tiny jitter");
 
     private Entity locked;
     private long lastFrame;
+    private final dev.utilclient.util.Human.Aim aim = new dev.utilclient.util.Human.Aim();
 
     public AimbotModule() { super("Aimbot", "Aim at players and mobs", Category.COMBAT); }
 
@@ -63,7 +64,8 @@ public final class AimbotModule extends Module {
         CombatState.target(target);
 
         Vec3 eye = p.getEyePosition();
-        Vec3 aim = Rotations.aimPoint(target, eye, aimAt.get());
+        Vec3 aim = humanize.get() && (aimAt.is("Body"))
+                ? this.aim.point(target, target.getBoundingBox().deflate(0.1)) : Rotations.aimPoint(target, eye, aimAt.get());
         Vec3 vel = target.getDeltaMovement();
         aim = aim.add(vel.x * predict.get(), 0, vel.z * predict.get());
         float[] want = Rotations.angles(eye, aim);
@@ -82,13 +84,19 @@ public final class AimbotModule extends Module {
                 dPitch = Mth.clamp(dPitch, -maxStep, maxStep);
             }
             default -> {
-                // ease: move a fraction of the remaining angle, capped by speed
-                float k = Math.min(1f, dt * speed.getFloat() / 45f);
-                dYaw = Mth.clamp(dYaw * k, -maxStep, maxStep);
-                dPitch = Mth.clamp(dPitch * k, -maxStep, maxStep);
+                if (humanize.get()) {
+                    float[] st = this.aim.step(p.getYRot(), p.getXRot(), want[0], want[1], maxStep);
+                    dYaw = st[0];
+                    dPitch = st[1];
+                } else {
+                    // ease: move a fraction of the remaining angle, capped by speed
+                    float k = Math.min(1f, dt * speed.getFloat() / 45f);
+                    dYaw = Mth.clamp(dYaw * k, -maxStep, maxStep);
+                    dPitch = Mth.clamp(dPitch * k, -maxStep, maxStep);
+                }
             }
         }
-        p.setYRot(p.getYRot() + dYaw);
-        if (vertical.get()) p.setXRot(Mth.clamp(p.getXRot() + dPitch, -90f, 90f));
+        // through vanilla's mouse path, in whole mouse steps
+        dev.utilclient.util.Human.turnView(p, dYaw, vertical.get() ? dPitch : 0f);
     }
 }

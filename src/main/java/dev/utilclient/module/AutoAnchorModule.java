@@ -31,12 +31,13 @@ public final class AutoAnchorModule extends Module {
     private final NumberSetting minDamage = num("Min damage", 6, 0, 36, 0.5);
     private final NumberSetting maxSelf = num("Max self damage", 8, 0, 36, 0.5);
     private final BoolSetting antiSuicide = bool("Anti suicide", true);
-    private final NumberSetting delay = num("Delay", 2, 0, 10, 1).unit("t").desc("Ticks between each step");
+    private final NumberSetting delay = num("Step interval", 110, 0, 500, 10).unit("ms").desc("Average time between each step");
     private final BoolSetting swapBack = bool("Swap back", true).desc("Return to your previous hotbar slot afterwards");
     private final ModeSetting rotate = mode("Rotate", "Packet", "None", "Packet");
     private final BoolSetting pauseOnEat = bool("Pause while eating", true);
 
-    private int wait;
+    private long next;
+    private final dev.utilclient.util.Human.Reaction seen = new dev.utilclient.util.Human.Reaction();
     private int returnSlot = -1;
 
     public AutoAnchorModule() { super("AutoAnchor", "Place, charge & detonate respawn anchors", Category.COMBAT); }
@@ -51,7 +52,7 @@ public final class AutoAnchorModule extends Module {
         if (mc.gameMode == null || p.isSpectator() || mc.gui.screen() != null) return;
         if (mc.level.dimension() == Level.NETHER) return;
         if (pauseOnEat.get() && p.isUsingItem()) return;
-        if (wait > 0) { wait--; return; }
+        if (System.currentTimeMillis() < next) return;
 
         LivingEntity target = (LivingEntity) TargetFilter.best(mc, targetRange.get(),
                 e -> TargetFilter.accept(e, p, players.get(), hostile.get(), passive.get(), true), "Distance");
@@ -60,6 +61,7 @@ public final class AutoAnchorModule extends Module {
             return;
         }
         CombatState.target(target);
+        if (dev.utilclient.util.Human.on() && !seen.ready(target.getUUID())) return;   // reaction time
         Vec3 eye = p.getEyePosition();
 
         // 1) an anchor already near the target?
@@ -78,7 +80,7 @@ public final class AutoAnchorModule extends Module {
             int charges = st.getValue(BlockStateProperties.RESPAWN_ANCHOR_CHARGES);
             if (charges == 0) {
                 if (!hold(p, Items.GLOWSTONE)) return;
-                Placer.interact(mc, anchor, Direction.UP, InteractionHand.MAIN_HAND, rotate.get());
+                if (!Placer.interact(mc, anchor, Direction.UP, InteractionHand.MAIN_HAND, rotate.get())) return;
             } else {
                 if (!safe(p, DamageCalc.anchor(p, anchor))) return;
                 // detonate with anything that isn't glowstone
@@ -87,10 +89,11 @@ public final class AutoAnchorModule extends Module {
                     if (other < 0) return;
                     remember(p);
                     Inv.select(p, other);
+                    if (dev.utilclient.util.Human.on()) return;   // click on a later tick
                 }
-                Placer.interact(mc, anchor, Direction.UP, InteractionHand.MAIN_HAND, rotate.get());
+                if (!Placer.interact(mc, anchor, Direction.UP, InteractionHand.MAIN_HAND, rotate.get())) return;
             }
-            wait = delay.getInt();
+            scheduleNext();
             return;
         }
 
@@ -108,8 +111,12 @@ public final class AutoAnchorModule extends Module {
             spot = b.immutable();
         }
         if (spot == null || !hold(p, Items.RESPAWN_ANCHOR)) return;
-        Placer.place(mc, spot, InteractionHand.MAIN_HAND, rotate.get(), true);
-        wait = delay.getInt();
+        if (Placer.place(mc, spot, InteractionHand.MAIN_HAND, rotate.get(), true)) scheduleNext();
+    }
+
+    private void scheduleNext() {
+        double m = delay.get();
+        next = System.currentTimeMillis() + (dev.utilclient.util.Human.on() ? dev.utilclient.util.Human.delay(m, m * 0.25, m * 0.4) : (long) m);
     }
 
     private void remember(LocalPlayer p) {

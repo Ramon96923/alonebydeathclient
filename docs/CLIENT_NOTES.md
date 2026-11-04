@@ -52,4 +52,12 @@ What popular clients do well, which of it DonutWaffen uses, and what's still on 
 | 0% knockback | Velocity checks | Velocity defaults to 85%, JumpReset as the legit option |
 | Perfectly regular timing | Statistical checks | Random delays, miss chance, CPS ranges |
 
+| Rotation steps that aren't whole mouse steps for your sensitivity | GCD / sensitivity / Aim checks (Grim, Vulcan, Polar) | 3.2 Humanizer: every rotation snapped to mouse pixels, sent through `Entity.turn` |
+| Constant turn speed, identical deltas, always the exact centre | Aim pattern / duplicate-look checks | 3.2: accelerate/ease aim with changing pace, wobble and a moving aim spot |
+| Silent rotation snapping back to the real view | Big single-packet rotation (snap) checks | 3.2: rotation glides back over a few ticks |
+| Hitting a crystal the tick it spawns, every time | Statistical / reaction checks | 3.2: *Crystal age* + gaussian reaction |
+| Hotbar swap and click in the same tick (crystal/anchor macros) | Bad-packets / autoclicker checks | 3.2: swaps settle 1–2 ticks before clicking |
+| Many modules clicking together (crystal + totem + aura) | CPS / multi-action checks | 3.2: one shared CPS budget incl. your own clicks |
+| Placing with a Packet rotation the server hasn't received yet | Rotation-place checks | 3.2: Placer waits for the sent rotation and clicks that ray's exact hit |
+
 Still risky by nature: Flight, Speed, packet Criticals, Mace spoof, Blatant AutoCrystal.

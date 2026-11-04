@@ -48,7 +48,10 @@ public final class Inv {
 
     /** Changes the held hotbar slot. The server learns about it on your next attack/use or tick. */
     public static void select(LocalPlayer p, int slot) {
-        if (slot >= 0 && slot < 9 && slot != selected(p)) p.getInventory().setSelectedSlot(slot);
+        if (slot >= 0 && slot < 9 && slot != selected(p)) {
+            p.getInventory().setSelectedSlot(slot);
+            Human.swapped();
+        }
     }
 
     public static void click(Minecraft mc, int slotId, int button, ContainerInput type) {

@@ -34,7 +34,8 @@
     "indigo.AltModelBlockRendererImplMixin",
     "AbstractButtonMixin",
     "ItemModelResolverMixin",
-    "MultiPackResourceManagerMixin"
+    "MultiPackResourceManagerMixin",
+    "AbstractContainerScreenAccessor"
   ],
   "injectors": {
     "defaultRequire": 0

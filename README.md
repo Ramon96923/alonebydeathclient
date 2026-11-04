@@ -4,7 +4,7 @@ A utility client built for DonutSMP and anarchy servers (formerly AloneByDeath C
 
 ## Main menu
 - The Minecraft logo is replaced by a **DonutWaffen** logo ("Utility Client" under it), and the window title says DonutWaffen.
-- Under the vanilla buttons there are **Click GUI** and **AloneByDeath** (Spotify) buttons, plus a music row: previous, play/pause with the song name, and next. If the screen is short, the vanilla buttons move up a little to make room.
+- Under the vanilla buttons there are **Click GUI** and **AloneByDeath on Spotify** buttons, plus a music row: previous, play/pause with the song name, and next. If the screen is short, the vanilla buttons move up a little to make room.
 - Every Minecraft button in every menu is drawn as a round pill in the client style (ClickGUI > *Round game menus*).
 
 Turn the extra buttons off under ClickGUI > *Main menu buttons*.
@@ -145,7 +145,10 @@ What changed in the modules:
 - **Triggerbot**: reaction 60–160 ms that clusters around the middle, plus a random post-cooldown delay.
 - **AutoClicker**: CPS drifts slowly within your range, with uneven gaps.
 - **Aimbot**: humanized by default and moves through the mouse path.
-- **AutoTotem Legit**: short reaction after a pop, and the F-swap steps land on random ticks.
+- **AutoTotem Legit**:
+  - Short reaction after a pop, and the F-swap steps land on random ticks.
+  - **Open inventory** (on by default): with no totem in your hotbar, it opens your inventory, moves a cursor to the totem along a natural curve, presses F on it and closes the inventory. The cursor timing follows Fitts' law and your mouse sensitivity; set *Cursor speed* and *Show cursor* to taste. With your inventory already open it uses the same cursor instead of clicking instantly.
+- **AutoCrystal**: *Idle without crystals* (on) means no targeting or aiming unless you have crystals it can use.
 
 Old 3.1 rules still apply: rotations ride in the normal movement packet, modules act at the start of the tick, Velocity takes 85%, AntiBot is on and Criticals sends no fake packets. Blatant modes (Flight, Speed, packet Criticals, Mace spoof, Blatant AutoCrystal) can still be caught. For anarchy servers you can switch the Humanizer off to get the old instant speed back.
 

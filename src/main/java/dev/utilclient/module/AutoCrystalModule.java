@@ -71,6 +71,8 @@ public final class AutoCrystalModule extends Module {
                     + "Silent: same aiming, server-side only. Blatant: instant, for anarchy servers without anticheat");
     private final NumberSetting turnSpeed = num("Turn speed", 30, 5, 180, 5).unit("°/t")
             .desc("Legit/Silent: how fast the aim moves").visible(() -> rotate.is("Legit") || rotate.is("Silent"));
+    private final BoolSetting needCrystals = bool("Idle without crystals", true)
+            .desc("Do nothing at all (no aiming, no targeting) unless you have end crystals you can use");
     private final BoolSetting pauseOnEat = bool("Pause while eating", true);
     private final NumberSetting pauseHealth = num("Pause below HP", 0, 0, 36, 1).desc("0 = never pause");
     private final BoolSetting render = bool("Render", true);
@@ -131,6 +133,7 @@ public final class AutoCrystalModule extends Module {
         if (mc.gui.screen() != null && !Inv.canClick(mc)) return;
         if (pauseOnEat.get() && p.isUsingItem()) return;
         if (pauseHealth.get() > 0 && DamageCalc.totalHealth(p) <= pauseHealth.get()) return;
+        if (needCrystals.get() && !hasCrystals(p)) { aim.reset(); return; }
 
         LivingEntity target = (LivingEntity) TargetFilter.best(mc, targetRange.get(),
                 e -> TargetFilter.accept(e, p, players.get(), hostile.get(), passive.get(), true), priority.get());
@@ -183,6 +186,12 @@ public final class AutoCrystalModule extends Module {
                 ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, p));
         // place with the exact point your crosshair is on, like a real right-click
         if (ray.getType() == HitResult.Type.BLOCK && ray.getBlockPos().equals(pos) && mayAct()) placeAt(mc, p, ray, pos, false);
+    }
+
+    /** Crystals in a hand, or in the hotbar when Switch can reach them. */
+    private boolean hasCrystals(LocalPlayer p) {
+        if (p.getOffhandItem().is(Items.END_CRYSTAL) || p.getMainHandItem().is(Items.END_CRYSTAL)) return true;
+        return !switchMode.is("None") && Inv.hotbar(p, Items.END_CRYSTAL) >= 0;
     }
 
     private void aim(LocalPlayer p, Vec3 point) {

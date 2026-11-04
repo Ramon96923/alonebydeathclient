@@ -66,9 +66,11 @@ public final class MainMenu {
         }
         int y = bottom + 4;
 
+        // the Spotify label is long, so it gets the wider share of the row
         Button gui = Button.builder(Component.literal("Click GUI"),
-                b -> Minecraft.getInstance().gui.setScreen(new ClickGui(screen))).bounds(cx - 100, y, 98, 20).build();
-        Button spotify = Button.builder(Component.literal("AloneByDeath"), b -> openSpotify()).bounds(cx + 2, y, 98, 20).build();
+                b -> Minecraft.getInstance().gui.setScreen(new ClickGui(screen))).bounds(cx - 100, y, 64, 20).build();
+        Button spotify = Button.builder(Component.literal("AloneByDeath on Spotify"), b -> openSpotify())
+                .bounds(cx - 32, y, 132, 20).build();
         widgets.add(gui);
         widgets.add(spotify);
         if (!player) return;

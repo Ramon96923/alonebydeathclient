@@ -54,11 +54,11 @@ public final class HudModule extends Module {
         elements.add(new Element("Armor", true, false, true, 0, 58, this::armor).centered());
         elements.add(new Element("Totems", true, false, true, 0, 58, this::totems).centered().shift(78));
         elements.add(new Element("Target HUD", true, false, false, 0, 0, this::targetHud).centered().shift(14).mid());
-        elements.add(new Element("Potions", false, true, true, 4, 40, this::potions));
+        elements.add(new Element("Potions", false, true, true, 4, 124, this::potions));
         elements.add(new Element("Keystrokes", false, false, true, 4, 60, this::keystrokes));
-        elements.add(new Element("Staff list", true, false, false, 4, 124, this::staff));
-        elements.add(new Element("Spotify", true, false, false, 4, 40, this::spotify));
-        elements.add(new Element("Music player", true, false, false, 4, 80, this::music));
+        elements.add(new Element("Staff list", true, false, false, 4, 130, this::staff));
+        elements.add(new Element("Spotify", true, true, true, 4, 40, this::spotify));
+        elements.add(new Element("Music player", true, true, true, 4, 78, this::music));
 
         // per-element options (right-click an element in the HUD editor)
         wmInfo = el("Watermark").bool("Info", true, "FPS and ping next to the name");
@@ -183,9 +183,13 @@ public final class HudModule extends Module {
         }
     }
 
+    private static final String LAYOUT_KEY = "_layout";
+    private static final java.util.Set<String> MOVED_IN_V2 = java.util.Set.of("Region map", "Staff list", "Spotify", "Music player", "Potions");
+
     @Override
     public JsonObject saveExtra() {
         JsonObject o = new JsonObject();
+        o.addProperty(LAYOUT_KEY, 2);
         for (Element e : elements) {
             JsonObject p = new JsonObject();
             p.addProperty("right", e.right);
@@ -200,8 +204,11 @@ public final class HudModule extends Module {
 
     @Override
     public void loadExtra(JsonObject json) {
+        int version = json.has(LAYOUT_KEY) ? json.get(LAYOUT_KEY).getAsInt() : 1;
         for (Element e : elements) {
-            if (!json.has(e.id)) continue;
+            if (!json.has(e.id) || !json.get(e.id).isJsonObject()) continue;
+            // 3.3.1 moved these to new default spots (the region map overlapped the module list)
+            if (version < 2 && MOVED_IN_V2.contains(e.id)) continue;
             JsonObject p = json.getAsJsonObject(e.id);
             e.right = p.get("right").getAsBoolean();
             e.bottom = p.get("bottom").getAsBoolean();
@@ -473,13 +480,16 @@ public final class HudModule extends Module {
         }
         boolean vert = arVertical.get();
         boolean pct = arDurability.is("Percent"), bar = arDurability.is("Bar");
-        int cell = vert ? 17 : 18;
-        int extra = pct ? (vert ? 26 : 10) : bar ? 3 : 0;
-        int w = vert ? 16 + extra : items.size() * 18, h = vert ? items.size() * cell : 16 + extra;
+        // horizontal percentages need room: space the pieces by the widest label so they never overlap
+        int widest = 0;
+        if (pct) for (ItemStack it : items) if (it.isDamageableItem()) widest = Math.max(widest, Fonts.width(pctText(it)));
+        int cell = vert ? 17 : Math.max(18, pct ? widest + 4 : 18);
+        int extra = pct ? (vert ? widest + 4 : 10) : bar ? 3 : 0;
+        int w = vert ? 16 + extra : items.size() * cell, h = vert ? items.size() * cell : 16 + extra;
         if (dry) return size(w, h);
         for (int i = 0; i < items.size(); i++) {
             ItemStack s = items.get(i);
-            int ix = vert ? x : x + i * 18, iy = vert ? y + i * cell : y;
+            int ix = vert ? x : x + i * cell + (cell - 16) / 2, iy = vert ? y + i * cell : y;
             if (s.isEmpty()) {
                 if (editing) Draw.round(g, ix + 1, iy + 1, ix + 15, iy + 15, 99, 0x30FFFFFF);
                 continue;
@@ -490,7 +500,7 @@ public final class HudModule extends Module {
             float frac = 1f - s.getDamageValue() / (float) Math.max(1, s.getMaxDamage());
             int col = Draw.healthColor(frac);
             if (pct) {
-                String t = Math.round(frac * 100) + "%";
+                String t = pctText(s);
                 if (vert) Fonts.text(g, t, ix + 18, iy + 4, col);
                 else Fonts.text(g, t, ix + 8 - Fonts.width(t) / 2, iy + 17, col);
             } else if (bar) {
@@ -500,6 +510,11 @@ public final class HudModule extends Module {
             }
         }
         return size(w, h);
+    }
+
+    private static String pctText(ItemStack s) {
+        float frac = 1f - s.getDamageValue() / (float) Math.max(1, s.getMaxDamage());
+        return Math.round(frac * 100) + "%";
     }
 
     private int[] totems(GuiGraphicsExtractor g, int x, int y, boolean right, boolean dry) {
@@ -702,10 +717,10 @@ public final class HudModule extends Module {
 
     private void mouseKey(GuiGraphicsExtractor g, int x, int y, int w, int h, String label, int cps, boolean down) {
         key(g, x, y, w, h, "", down);
-        int fg = down ? 0xFF101014 : 0xFFE6E6EE;
+        int fg = down ? readableOn(color(0f)) : 0xFFFFFFFF;
         if (!ksCps.get()) { Fonts.centered(g, label, x + w / 2, y + h / 2 - 4, fg, true); return; }
         Fonts.centered(g, label, x + w / 2, y + 3, fg, true);
-        Fonts.centered(g, cps + " CPS", x + w / 2, y + 13, down ? 0xFF2A2A30 : 0xFF9A9AB0, false);
+        Fonts.centered(g, cps + " CPS", x + w / 2, y + 13, down ? Draw.withAlpha(fg, 0.85f) : 0xFF9A9AB0, false);
     }
 
     private void key(GuiGraphicsExtractor g, int x, int y, int w, int h, String label, boolean down) {
@@ -714,7 +729,13 @@ public final class HudModule extends Module {
         int fill = down ? Draw.withAlpha(color(0f), 0.85f) : Draw.alpha(0x0B0B10, bgOpacity.getInt());
         if (!shape.is("Square")) Draw.round(g, x, y, x + w, y + h, shape.is("Round") ? 99 : Math.max(3, radius.getInt() - 1), fill);
         else g.fill(x, y, x + w, y + h, fill);
-        Fonts.centered(g, label, x + w / 2, y + h / 2 - 4, down ? 0xFF101014 : 0xFFE6E6EE, t > 0.5f);
+        Fonts.centered(g, label, x + w / 2, y + h / 2 - 4, down ? readableOn(fill) : 0xFFFFFFFF, false);
+    }
+
+    /** White text, unless the background is very light (e.g. the White colour mode). */
+    static int readableOn(int bg) {
+        int r = (bg >> 16) & 0xFF, gg = (bg >> 8) & 0xFF, b = bg & 0xFF;
+        return (0.299 * r + 0.587 * gg + 0.114 * b) > 200 ? 0xFF16161C : 0xFFFFFFFF;
     }
 
     private int[] keystrokes(GuiGraphicsExtractor g, int x, int y, boolean right, boolean dry) {

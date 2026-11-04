@@ -29,6 +29,22 @@ public final class AutoTotemModule extends Module {
     private final ModeSetting method = mode("Method", "Legit", "Legit", "Blatant")
             .desc("Legit: hotbar totems are swapped like pressing F, and inventory clicks only happen with your "
                     + "inventory open (what anticheats expect). Blatant: clicks the inventory anytime (instant, easy to flag)");
+    private final BoolSetting openInv = bool("Open inventory", true)
+            .desc("Legit: with no totem in the hotbar, open your inventory, move to the totem, press F and close it again")
+            .visible(() -> method.is("Legit"));
+    private final NumberSetting cursorSpeed = num("Cursor speed", 1.0, 0.4, 2.5, 0.05).unit("x")
+            .desc("How fast the inventory cursor moves (on top of your mouse sensitivity)").visible(() -> method.is("Legit"));
+    private final BoolSetting showCursor = bool("Show cursor", true).desc("Draw the moving cursor in the inventory")
+            .visible(() -> method.is("Legit"));
+
+    // inventory cursor: 0 idle, 1 moving to the slot, 2 swapped, waiting to close
+    private int cStage;
+    private int cSlot = -1;
+    private Item cItem;
+    private boolean openedByUs, cPlanned;
+    private long cStart, cDur, cNext;
+    private float sx, sy, arc;
+    private net.minecraft.client.gui.screens.Screen cScreen;
 
     // legit F-swap: 1 = slot selected, waiting a tick; 2 = swapped, switch back next tick
     private int fStage, fPrev = -1;
@@ -45,7 +61,8 @@ public final class AutoTotemModule extends Module {
     public void onTick(Minecraft mc) {
         LocalPlayer p = mc.player;
         lastCount = Inv.count(p, Items.TOTEM_OF_UNDYING);
-        if (p.isSpectator() || p.isCreative()) return;
+        if (p.isSpectator() || p.isCreative()) { resetCursor(); return; }
+        if (cStage != 0) { cursorTick(mc); return; }
         if (fStage == 1) {
             if (!dev.utilclient.util.Human.swapSettled()) return;   // the slot change gets its own tick (or two)
             p.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerActionPacket(
@@ -84,12 +101,26 @@ public final class AutoTotemModule extends Module {
             slot = find(p, Items.TOTEM_OF_UNDYING);
         }
         if (slot < 0) return;
-        if (method.is("Legit") && !(mc.gui.screen() instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen)) {
+        boolean invOpen = mc.gui.screen() instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen;
+        if (method.is("Legit") && invOpen) {
+            // inventory open: move a cursor to the item and press F on it, like a person
+            startCursor(mc, slot, p.inventoryMenu.getSlot(slot).getItem().getItem(), false);
+            return;
+        }
+        if (method.is("Legit")) {
             // inventory closed: only a hotbar item can be swapped, the way pressing F does it
             int hb = Inv.hotbar(p, want);
             if (hb < 0 && want != Items.TOTEM_OF_UNDYING) hb = Inv.hotbar(p, Items.TOTEM_OF_UNDYING);
             if (hb < 0 && want == Items.GOLDEN_APPLE) hb = Inv.hotbar(p, Items.ENCHANTED_GOLDEN_APPLE);
-            if (hb < 0) return;
+            if (hb < 0) {
+                if (openInv.get() && mc.gui.screen() == null) {
+                    // open the inventory ourselves and fetch it
+                    var inv = new net.minecraft.client.gui.screens.inventory.InventoryScreen(p);
+                    mc.gui.setScreen(inv);
+                    startCursor(mc, slot, p.inventoryMenu.getSlot(slot).getItem().getItem(), true);
+                }
+                return;
+            }
             fPrev = Inv.selected(p);
             Inv.select(p, hb);
             fStage = 1;
@@ -97,6 +128,115 @@ public final class AutoTotemModule extends Module {
         }
         Inv.swapWithOffhand(mc, slot);
         wait = delay.getInt();
+    }
+
+    // ---- inventory cursor --------------------------------------------------------------------------
+
+    private void startCursor(Minecraft mc, int slot, Item item, boolean opened) {
+        cStage = 1;
+        cSlot = slot;
+        cItem = item;
+        openedByUs = opened;
+        cPlanned = false;   // start point and duration are worked out on the first frame (screen size known)
+        cScreen = mc.gui.screen();
+        // a moment to "find" the item before the hand starts moving
+        cStart = System.currentTimeMillis() + dev.utilclient.util.Human.delay(opened ? 140 : 70, 30, 40);
+        cDur = 0;
+    }
+
+    private void resetCursor() {
+        cStage = 0;
+        cSlot = -1;
+        cScreen = null;
+        openedByUs = false;
+        cPlanned = false;
+    }
+
+    /** Called from the screen hook every frame and from onTick: plans the path once the screen exists. */
+    private float[] slotCentre(net.minecraft.client.gui.screens.Screen screen) {
+        int left, top;
+        if (screen instanceof dev.utilclient.mixin.AbstractContainerScreenAccessor acc) {
+            left = acc.dw$left();
+            top = acc.dw$top();
+        } else {
+            left = (screen.width - 176) / 2;
+            top = (screen.height - 166) / 2;
+        }
+        var sl = Minecraft.getInstance().player.inventoryMenu.getSlot(cSlot);
+        return new float[] {left + sl.x + 8, top + sl.y + 8};
+    }
+
+    private void plan(Minecraft mc, net.minecraft.client.gui.screens.Screen screen) {
+        if (cPlanned) return;
+        cPlanned = true;
+        if (openedByUs) {
+            sx = screen.width / 2f;   // the cursor starts in the middle when the inventory opens
+            sy = screen.height / 2f;
+        } else {
+            sx = (float) mc.mouseHandler.getScaledXPos(mc.getWindow());
+            sy = (float) mc.mouseHandler.getScaledYPos(mc.getWindow());
+        }
+        float[] t = slotCentre(screen);
+        double d = Math.hypot(t[0] - sx, t[1] - sy);
+        // Fitts' law: bigger and farther = slower; faster at high sensitivity
+        double ms = (90 + 95 * (Math.log(d / 16.0 + 1) / Math.log(2))) / dev.utilclient.util.Human.sensScale() / cursorSpeed.get();
+        cDur = dev.utilclient.util.Human.delay(ms, ms * 0.12, ms * 0.6);
+        arc = (float) ((Math.random() - 0.5) * 0.25 * d);
+    }
+
+    private void cursorTick(Minecraft mc) {
+        var screen = mc.gui.screen();
+        if (screen != cScreen || !(screen instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen)) {
+            resetCursor();   // closed or replaced by the player: give up quietly
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (cStage == 1) {
+            if (!cPlanned) plan(mc, screen);
+            if (now < cStart + cDur) return;
+            if (now < cStart + cDur + 40) return;   // settle on the slot before pressing
+            var st = mc.player.inventoryMenu.getSlot(cSlot).getItem();
+            if (!st.isEmpty() && st.is(cItem) && Inv.canClick(mc)) Inv.swapWithOffhand(mc, cSlot);   // "F" on the slot
+            cStage = 2;
+            cNext = now + dev.utilclient.util.Human.delay(openedByUs ? 130 : 60, 35, 50);
+        } else if (cStage == 2) {
+            if (now < cNext) return;
+            if (openedByUs) screen.onClose();
+            resetCursor();
+            wait = delay.getInt() + 1;
+        }
+    }
+
+    /** From UtilClient AFTER_INIT for inventory screens: draws the moving cursor. */
+    public void attach(net.minecraft.client.gui.screens.Screen screen) {
+        net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.afterExtract(screen).register((s, g, mx, my, tick) -> {
+            if (cStage == 0 || s != cScreen || !showCursor.get()) return;
+            try {
+                Minecraft mc = Minecraft.getInstance();
+                if (!cPlanned) plan(mc, s);
+                float[] t = slotCentre(s);
+                long now = System.currentTimeMillis();
+                double k = cStage == 2 ? 1 : cDur <= 0 ? 0 : Math.max(0, Math.min(1, (now - cStart) / (double) cDur));
+                double e = k * k * k * (10 - 15 * k + 6 * k * k);   // minimum-jerk curve, like a real hand
+                double dx = t[0] - sx, dy = t[1] - sy, len = Math.max(1, Math.hypot(dx, dy));
+                double bow = Math.sin(Math.PI * e) * arc;
+                int cx = (int) Math.round(sx + dx * e - dy / len * bow), cy = (int) Math.round(sy + dy * e + dx / len * bow);
+                g.nextStratum();
+                int acc = ModuleManager.CLICK_GUI.accent(0f);
+                if (k >= 1) dev.utilclient.util.Draw.round(g, (int) t[0] - 9, (int) t[1] - 9, (int) t[0] + 9, (int) t[1] + 9, 99,
+                        dev.utilclient.util.Draw.withAlpha(acc, 0.35f));
+                dev.utilclient.util.Draw.round(g, cx - 4, cy - 4, cx + 4, cy + 4, 99, 0xFFFFFFFF);
+                dev.utilclient.util.Draw.round(g, cx - 3, cy - 3, cx + 3, cy + 3, 99, acc);
+            } catch (Throwable ignored) {
+                // cosmetic
+            }
+        });
+    }
+
+    @Override
+    protected void onDisable() {
+        if (openedByUs && cScreen != null && Minecraft.getInstance().gui.screen() == cScreen) cScreen.onClose();
+        resetCursor();
     }
 
     private static int find(LocalPlayer p, Item item) {

@@ -36,5 +36,17 @@ public final class VanillaButtons {
             int r = (y1 - y0) / 2;
             Draw.round(g, x0 + r, y1 - 2, x1 - r, y1 - 1, 0, Draw.withAlpha(acc, a));
         }
+        // our own label: flat white (no drop shadow), never dark-on-dark when pressed or focused
+        String label = w.getMessage().getString();
+        if (!label.isEmpty() && w.getWidth() > w.getHeight() + 2) {
+            int text = !w.active ? 0xFF7A7A88 : 0xFFF4F4F8;
+            String shown = Fonts.fit(label, w.getWidth() - 10);
+            Fonts.centered(g, shown, (x0 + x1) / 2, y0 + (w.getHeight() - 8) / 2, Draw.withAlpha(text, a), false);
+        }
+    }
+
+    /** True when drawBackground already drew the label, so vanilla's (shadowed) one is skipped. */
+    public static boolean ownsLabel(AbstractWidget w) {
+        return enabled() && !w.getMessage().getString().isEmpty() && w.getWidth() > w.getHeight() + 2;
     }
 }

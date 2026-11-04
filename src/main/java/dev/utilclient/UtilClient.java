@@ -93,6 +93,9 @@ public class UtilClient implements ClientModInitializer {
         ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
             dev.utilclient.gui.VanillaButtons.attach(screen);
             if (screen instanceof TitleScreen) MainMenu.attach(screen);
+            else if (screen instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen) {
+                ModuleManager.AUTO_TOTEM.attach(screen);
+            }
             else if (screen instanceof net.minecraft.client.gui.screens.DisconnectedScreen) {
                 ModuleManager.AUTO_RECONNECT.attach(screen);
             }
@@ -101,14 +104,14 @@ public class UtilClient implements ClientModInitializer {
 
     public static void openGuiNextTick() { openGuiNextTick = true; }
 
-    /** Mod version from fabric.mod.json, e.g. "3.3.0". */
+    /** Mod version from fabric.mod.json, e.g. "3.3.1". */
     public static String version() {
         try {
             return FabricLoader.getInstance().getModContainer(MOD_ID)
                     .map(c -> c.getMetadata().getVersion().getFriendlyString())
-                    .orElse("3.3.0");
+                    .orElse("3.3.1");
         } catch (Throwable t) {
-            return "3.3.0";
+            return "3.3.1";
         }
     }
 

@@ -40,7 +40,7 @@ public final class RegionMapModule extends Module {
 
     public RegionMapModule() {
         super("RegionMap", "Region map", Category.DONUT);
-        el = ModuleManager.HUD.addElement("Region map", true, true, false, 4, 60, this::paint);
+        el = ModuleManager.HUD.addElement("Region map", true, false, false, 4, 22, this::paint);
         size = el.num("Size", 81, 54, 162, 9);
         numbers = el.bool("Numbers", false, "Region numbers on the map");
         legend = el.bool("Name", true, "Region number and name under the map");

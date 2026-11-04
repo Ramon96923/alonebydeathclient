@@ -22,4 +22,13 @@ public abstract class AbstractButtonMixin {
             // fall back to the vanilla sprite
         }
     }
+
+    @Inject(method = "extractDefaultLabel", at = @At("HEAD"), cancellable = true)
+    private void dw$label(net.minecraft.client.gui.ActiveTextCollector text, CallbackInfo ci) {
+        try {
+            if (VanillaButtons.ownsLabel((AbstractWidget) (Object) this)) ci.cancel();
+        } catch (Throwable ignored) {
+            // vanilla label
+        }
+    }
 }

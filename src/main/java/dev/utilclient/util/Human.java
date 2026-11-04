@@ -151,13 +151,60 @@ public final class Human {
         return (float) (Math.round(delta / px) * px);
     }
 
+    /** How fast this sensitivity turns compared with the default (50%), softened: 0.6x .. 1.8x. */
+    public static float sensScale() {
+        if (!on() || !h().sensSpeed()) return 1f;
+        return (float) Math.max(0.6, Math.min(1.8, Math.sqrt(pixel() / 0.15)));
+    }
+
     private static double carryX, carryY;
+    private static float pendYaw, pendPitch;
+    private static long lastFrameNs, lastApplyNs;
+
+    /** Turn still queued for the coming frames (so aim can plan from where the view is heading). */
+    public static float pendingYaw() { return pendYaw; }
+    public static float pendingPitch() { return pendPitch; }
 
     /**
-     * Turns the real view by about (dYaw, dPitch) degrees, through vanilla's own mouse code path
-     * ({@code Entity.turn}), in whole mouse pixels. Leftover fractions carry over to the next call.
+     * Queues a turn of about (dYaw, dPitch) degrees. It's spread over the next few rendered frames, so the
+     * view glides like a hand on a mouse instead of jumping once per tick.
      */
     public static void turnView(LocalPlayer p, float dYaw, float dPitch) {
+        if (!on()) { turnViewNow(p, dYaw, dPitch); return; }
+        pendYaw += dYaw;
+        pendPitch += dPitch;
+        if (System.nanoTime() - lastFrameNs > 100_000_000L) flush(p);   // no frames (F1/minimised): apply now
+    }
+
+    /** Every rendered frame, from the HUD callback. */
+    public static void frame() {
+        long now = System.nanoTime();
+        double dt = lastApplyNs == 0 ? 0.016 : Math.min(0.1, (now - lastApplyNs) / 1e9);
+        lastApplyNs = now;
+        lastFrameNs = now;
+        LocalPlayer p = Minecraft.getInstance().player;
+        if (p == null || (pendYaw == 0 && pendPitch == 0)) return;
+        // exponential glide: most of a tick's turn lands within ~2-3 frames, all of it well inside the tick
+        double k = 1 - Math.exp(-dt / 0.018);
+        float sy = (float) (pendYaw * k), sp = (float) (pendPitch * k);
+        if (Math.abs(pendYaw - sy) < 0.02f) sy = pendYaw;
+        if (Math.abs(pendPitch - sp) < 0.02f) sp = pendPitch;
+        pendYaw -= sy;
+        pendPitch -= sp;
+        turnViewNow(p, sy, sp);
+    }
+
+    private static void flush(LocalPlayer p) {
+        float y = pendYaw, x = pendPitch;
+        pendYaw = pendPitch = 0;
+        turnViewNow(p, y, x);
+    }
+
+    /**
+     * Turns the real view right now, through vanilla's own mouse code path ({@code Entity.turn}), in whole
+     * mouse pixels. Leftover fractions carry over to the next call.
+     */
+    public static void turnViewNow(LocalPlayer p, float dYaw, float dPitch) {
         if (!on() || !h().gcdFix()) {
             p.turn(dYaw / 0.15, dPitch / 0.15);
             return;
@@ -202,12 +249,15 @@ public final class Human {
                 paceUntil = now + 120 + rng().nextInt(300);
             }
             float smooth = h().smoothness();                          // 0 = snappy, 1 = very smooth
-            float max = maxSpeed * pace;
+            float max = maxSpeed * pace * sensScale();
             float accel = max * (0.55f - 0.35f * smooth) * (0.8f + rng().nextFloat() * 0.4f);
             float speed = Math.min(v + accel, max);
             // ease into the target: never more than a (random) fraction of what's left
             float ease = (float) (dist * ((0.62 - 0.32 * smooth) + rng().nextGaussian() * 0.06));
             speed = Math.min(speed, Math.max(ease, (float) Math.min(dist, 0.35)));
+            // low-pass the speed so it never jumps from one step to the next
+            speed = v + (speed - v) * (0.75f - 0.4f * smooth);
+            speed = Math.min(speed, (float) dist);
             v = speed;
             float k = (float) (speed / dist);
             float pitchK = 0.82f + rng().nextFloat() * 0.14f;     // people move vertically a bit slower
@@ -220,9 +270,11 @@ public final class Human {
         /** Step the real view toward {@code point}. @return degrees left to turn */
         public double turnView(LocalPlayer p, Vec3 point, float maxSpeed) {
             float[] want = Rotations.angles(p.getEyePosition(), point);
-            float[] s = step(p.getYRot(), p.getXRot(), want[0], want[1], maxSpeed);
+            // plan from where the view is already heading (turn still gliding in from last tick)
+            float cy = p.getYRot() + pendingYaw(), cp = p.getXRot() + pendingPitch();
+            float[] s = step(cy, cp, want[0], want[1], maxSpeed);
             Human.turnView(p, s[0], s[1]);
-            float ry = Mth.wrapDegrees(want[0] - p.getYRot()), rp = want[1] - p.getXRot();
+            float ry = Mth.wrapDegrees(want[0] - (cy + s[0])), rp = want[1] - (cp + s[1]);
             return Math.sqrt(ry * ry + rp * rp);
         }
 

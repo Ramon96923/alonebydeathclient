@@ -1,0 +1,8 @@
+-proc:none
+--release
+21
+-d
+/tmp/claude-0/-home-claude/e545c0da-31c1-5462-aeee-22aee0387cd4/scratchpad/out
+@/tmp/claude-0/-home-claude/e545c0da-31c1-5462-aeee-22aee0387cd4/scratchpad/srcs.txt
+-Xmaxerrs
+100000

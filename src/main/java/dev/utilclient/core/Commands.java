@@ -63,6 +63,18 @@ public final class Commands {
             case "macro", "macros", "m" -> macro(a);
             case "music", "mp" -> music(a);
             case "spotify", "sp" -> spotify(a);
+            case "region", "rg" -> {
+                var rm = ModuleManager.REGION_MAP;
+                if (a.length >= 3 && a[0].equalsIgnoreCase("set")) {
+                    int n = Integer.parseInt(a[1]);
+                    if (n < 1 || n > 81) throw new IllegalArgumentException("region number must be 1-81");
+                    String name = String.join(" ", java.util.Arrays.copyOfRange(a, 2, a.length));
+                    rm.setName(n, name.equalsIgnoreCase("none") ? "" : name);
+                    Chat.info("Region " + n + " = " + (name.equalsIgnoreCase("none") ? "(cleared)" : name));
+                } else {
+                    Chat.info(rm.describe());
+                }
+            }
             case "staff" -> {
                 var list = ModuleManager.STAFF_ALERT.online();
                 if (!ModuleManager.STAFF_ALERT.isEnabled()) Chat.info("Turn on StaffAlert to track staff.");
@@ -103,6 +115,7 @@ public final class Commands {
         Chat.info(p + "music play|pause|next|prev|list|folder|vol <0-100>|<song name>  -  AloneByDeath player");
         Chat.info(p + "spotify play|next|prev  -  control the Spotify app");
         Chat.info(p + "staff  -  list staff online (StaffAlert)");
+        Chat.info(p + "region  |  region set <1-81> <name>  -  DonutSMP region you're in / name a region");
     }
 
     private static void music(String[] a) {

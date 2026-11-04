@@ -1,15 +1,51 @@
-# DonutWaffen 3.2 (Fabric, Minecraft 26.3)
+# DonutWaffen 3.3 (Fabric, Minecraft 26.3)
 
 A utility client built for DonutSMP and anarchy servers (formerly AloneByDeath Client). Your old settings are copied over automatically on first launch.
 
 ## Main menu
-When you're on the title screen there's a **DonutWaffen** card in the top-left:
-- **Open Click GUI** opens the full menu right there, before you even join a world (it also shows the key it's bound to).
-- **AloneByDeath on Spotify** opens [the artist page](https://open.spotify.com/artist/0MVEjD74djJKq2ZJcNniE7) in your browser.
+- The Minecraft logo is replaced by a **DonutWaffen** logo ("Utility Client" under it), and the window title says DonutWaffen.
+- Under the vanilla buttons there are **Click GUI** and **AloneByDeath** (Spotify) buttons, plus a music row: previous, play/pause with the song name, and next. If the screen is short, the vanilla buttons move up a little to make room.
+- Every Minecraft button in every menu is drawn as a round pill in the client style (ClickGUI > *Round game menus*).
 
-- The **AloneByDeath player** row under it plays your music: previous, play/pause, next, with the song and its progress.
+Turn the extra buttons off under ClickGUI > *Main menu buttons*.
 
-Turn the card off under Client > ClickGUI > *Main menu card*. With *Rounded game menus* on (the default), Minecraft's own buttons on every screen are drawn rounded in the client's style too.
+## Round style
+- ClickGUI > *Shape* and HUD > *Shape* default to **Round**: pill headers, buttons, switches, search bar and module highlights; pill HUD boxes and module-list rows; circular keystrokes, hotbar slots and colour swatches.
+- Tall HUD boxes (coordinates, target HUD) keep 9 px corners so text never runs over the curve.
+- *Rounded* brings back the corner-radius slider, and *Square* turns rounding off.
+
+## HUD element options
+In the HUD editor, **right-click** an element (on screen or in the list) to open its own options:
+- **Watermark:** info, version.
+- **Module list:** mode info, order, side bar.
+- **Coordinates:** other dimension, facing, decimals.
+- **Info:** speed, ping, FPS.
+- **Armor:** durability as percent, bar or off; vertical layout; hand items.
+- **Totems:** hide at 0.
+- **Target HUD:** distance, health bar.
+- **Potions:** time.
+- **Keystrokes:** mouse buttons, CPS, space bar.
+- **Staff list:** max rows.
+- **Spotify:** elapsed time.
+- **Music player:** progress bar.
+- **Region map:** size, numbers, name.
+
+## CustomFOV (Render)
+- Any FOV from 30 to 170.
+- *Dynamic FOV*: Keep (sprint/speed still widen it), Off or Subtle.
+- A separate *Hand FOV* for your hand and held items.
+
+## CustomTotem (Render)
+Changes how totems look for you: in hand, in your inventory and in the pop animation.
+- **Model:** built-in 3D Donut, Waffle or Heart.
+- **Skin:** any player's head by name (empty means yours).
+- **Image:** put a PNG/JPG in `config/donutwaffen/totems/` and type its name under *Image*. The game reloads its textures once to apply it.
+
+## RegionMap (Donut)
+DonutSMP's overworld (±225,000) is a 9×9 grid of 50,000-block regions, numbered 1–81 from the north-west corner. Each region is served from one location (EU Central, EU West, NA East, NA West, Asia or Oceania).
+- **Region map** HUD element: a round minimap of the grid with your position, heading and current region.
+- `.region` tells you the region number, name and bounds. You get a chat message when you cross into a new region.
+- Region names live in `config/donutwaffen/regions.txt`. Fill it from the official map, or set them in-game with `.region set 41 NA East`. Cells are coloured by name.
 
 ## AloneByDeath music player
 1. Put `.mp3` or `.wav` files in `.minecraft/config/donutwaffen/music/` (the folder is created on first launch; `.music folder` opens it).
@@ -88,6 +124,8 @@ A custom DonutWaffen panorama (dusk sky with a giant donut and a waffle moon) an
 ## Staying unbanned
 ### Humanizer (Client > Humanizer, on by default)
 Every combat module goes through one shared set of "act like a person" rules:
+- **Speed follows your sensitivity**: aim turns faster at high mouse sensitivity and slower at low, like your hand would (*Speed from sensitivity*).
+- **Smooth on screen**: each tick's turn is spread over the next few frames, so the view glides instead of stepping 20 times a second.
 - **Mouse-step rotations**: each view change is a whole number of mouse steps for your sensitivity and goes through Minecraft's own mouse code, so sensitivity (GCD) checks pass.
 - **Natural aim**: turning speeds up, slows into the target and changes pace every few hundred ms. It aims at a slightly different spot each time (not the dead centre), with a tiny wobble.
 - **Silent rotations glide back** to where you're really looking instead of snapping there in one packet.
@@ -134,6 +172,7 @@ Everything saves automatically to `.minecraft/config/donutwaffen/config.json`: m
 | `.music ...` | AloneByDeath music player (see above) |
 | `.spotify play\|next\|prev` | Control Spotify |
 | `.staff` | List staff online |
+| `.region` / `.region set <1-81> <name>` | DonutSMP region you're in / name a region |
 
 ## Modules
 - **Combat:** AutoHit (kill aura), Triggerbot, AutoClicker, Aimbot, Criticals, Hitbox, OldPvP, Mace, Spear, AutoTotem, AutoCrystal, AutoAnchor, Surround, AutoArmor, AutoWeapon, AutoTrap, SelfTrap, HoleFiller, AutoLog, ShieldBreaker, AutoPot, AntiBot

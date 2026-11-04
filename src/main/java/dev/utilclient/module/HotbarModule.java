@@ -29,7 +29,7 @@ public final class HotbarModule extends Module {
         HudModule hud = ModuleManager.HUD;
         int r = hud.cornerRadius();
         int w = 182, h = 22, x = g.guiWidth() / 2 - w / 2, y = g.guiHeight() - h - 1;
-        Draw.round(g, x, y, x + w, y + h, r + 2, hud.bgColor() == 0 ? 0x90000000 : hud.bgColor());
+        Draw.round(g, x, y, x + w, y + h, hud.isRound() ? 99 : r + 2, hud.bgColor() == 0 ? 0x90000000 : hud.bgColor());
 
         int sel = p.getInventory().getSelectedSlot();
         if (slide < 0) slide = sel;
@@ -40,7 +40,7 @@ public final class HotbarModule extends Module {
         }
         int acc = hud.accent(0f);
         Draw.round(g, sx, y + 1, sx + 20, y + 21, Math.max(2, r), accentSlot.get() ? Draw.withAlpha(acc, 0.45f) : 0x60FFFFFF);
-        Draw.round(g, sx, y + 20, sx + 20, y + 21, 0, accentSlot.get() ? acc : 0xFFFFFFFF);
+        if (!hud.isRound()) Draw.round(g, sx, y + 20, sx + 20, y + 21, 0, accentSlot.get() ? acc : 0xFFFFFFFF);
 
         for (int i = 0; i < 9; i++) {
             ItemStack s = p.getInventory().getItem(i);
@@ -52,7 +52,7 @@ public final class HotbarModule extends Module {
         ItemStack off = p.getOffhandItem();
         if (!off.isEmpty()) {
             int ox = x - 26;
-            Draw.round(g, ox, y, ox + 22, y + h, r + 2, hud.bgColor() == 0 ? 0x90000000 : hud.bgColor());
+            Draw.round(g, ox, y, ox + 22, y + h, hud.isRound() ? 99 : r + 2, hud.bgColor() == 0 ? 0x90000000 : hud.bgColor());
             g.item(off, ox + 3, y + 3);
             g.itemDecorations(mc.font, off, ox + 3, y + 3);
         }

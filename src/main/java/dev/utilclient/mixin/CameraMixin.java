@@ -14,8 +14,15 @@ public abstract class CameraMixin {
     @Inject(method = "calculateFov", at = @At("RETURN"), cancellable = true)
     private void abd$fov(CallbackInfoReturnable<Float> cir) {
         float fov = cir.getReturnValue();
+        if (ModuleManager.CUSTOM_FOV.isEnabled()) fov = ModuleManager.CUSTOM_FOV.apply(fov);
         if (ModuleManager.ZOOM.isEnabled()) fov = ModuleManager.ZOOM.apply(fov);
         RenderState.fov = fov;
         cir.setReturnValue(fov);
+    }
+
+    /** CustomFOV: hand / held item FOV. */
+    @Inject(method = "calculateHudFov", at = @At("RETURN"), cancellable = true)
+    private void dw$hudFov(CallbackInfoReturnable<Float> cir) {
+        if (ModuleManager.CUSTOM_FOV.isEnabled()) cir.setReturnValue(ModuleManager.CUSTOM_FOV.applyHand(cir.getReturnValue()));
     }
 }

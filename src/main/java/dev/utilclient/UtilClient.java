@@ -53,6 +53,7 @@ public class UtilClient implements ClientModInitializer {
 
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "overlay"), (graphics, delta) -> {
             RenderState.frame();
+            dev.utilclient.util.Human.frame();
             ModuleManager.renderHud(graphics, delta.getGameTimeDeltaPartialTick(false));
             try {
                 Toasts.render(graphics, graphics.guiWidth(), graphics.guiHeight());
@@ -100,14 +101,14 @@ public class UtilClient implements ClientModInitializer {
 
     public static void openGuiNextTick() { openGuiNextTick = true; }
 
-    /** Mod version from fabric.mod.json, e.g. "3.2.1". */
+    /** Mod version from fabric.mod.json, e.g. "3.3.0". */
     public static String version() {
         try {
             return FabricLoader.getInstance().getModContainer(MOD_ID)
                     .map(c -> c.getMetadata().getVersion().getFriendlyString())
-                    .orElse("3.2.1");
+                    .orElse("3.3.0");
         } catch (Throwable t) {
-            return "3.2.1";
+            return "3.3.0";
         }
     }
 

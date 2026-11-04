@@ -97,6 +97,6 @@ public final class AimbotModule extends Module {
             }
         }
         // through vanilla's mouse path, in whole mouse steps
-        dev.utilclient.util.Human.turnView(p, dYaw, vertical.get() ? dPitch : 0f);
+        dev.utilclient.util.Human.turnViewNow(p, dYaw, vertical.get() ? dPitch : 0f);
     }
 }

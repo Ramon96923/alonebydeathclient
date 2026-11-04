@@ -31,7 +31,10 @@
     "ScreenEffectRendererMixin",
     "SetEntityMotionPacketMixin",
     "TextureManagerMixin",
-    "indigo.AltModelBlockRendererImplMixin"
+    "indigo.AltModelBlockRendererImplMixin",
+    "AbstractButtonMixin",
+    "ItemModelResolverMixin",
+    "MultiPackResourceManagerMixin"
   ],
   "injectors": {
     "defaultRequire": 0

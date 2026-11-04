@@ -15,12 +15,24 @@ public final class ClickGuiModule extends Module {
     public final ModeSetting headerStyle = mode("Header style", "Filled", "Filled", "Underline", "Minimal")
             .desc("Filled (Kami style) or dark with an accent underline (Lambda style)");
     public final NumberSetting scale = num("GUI scale", 0.85, 0.5, 1.3, 0.05).desc("Shrink or grow the whole menu");
-    public final NumberSetting radius = num("Corner radius", 4, 0, 8, 1).desc("How rounded panels and buttons are");
+    public final ModeSetting shape = mode("Shape", "Round", "Round", "Rounded", "Square")
+            .desc("Round: fully round headers, buttons and pills everywhere. Rounded: use Corner radius");
+    public final NumberSetting radius = num("Corner radius", 4, 0, 8, 1).desc("How rounded panels and buttons are")
+            .visible(() -> shape.is("Rounded"));
+
+    /** Radius for panels and buttons: Round makes every header/button/search bar a full pill. */
+    public int cornerRadius() {
+        return switch (shape.get()) {
+            case "Round" -> 7;
+            case "Square" -> 0;
+            default -> radius.getInt();
+        };
+    }
     public final NumberSetting panelWidth = num("Panel width", 100, 80, 170, 2);
     public final NumberSetting maxHeight = num("Max panel height", 300, 120, 600, 10).desc("Taller panels scroll");
     public final NumberSetting opacity = num("Panel opacity", 225, 60, 255, 5);
     public final BoolSetting shadow = bool("Panel shadow", true).desc("Soft shadow behind the panels");
-    public final BoolSetting roundedMenus = bool("Rounded game menus", true).desc("Restyle Minecraft's own menu buttons to match");
+    public final BoolSetting roundedMenus = bool("Round game menus", true).desc("Draw Minecraft's own buttons as round pills in the client style");
     public final ModeSetting background = mode("Background", "Dim", "Dim", "Blur", "None").desc("What happens behind the GUI");
     public final BoolSetting customFont = bool("Custom font", true).desc("Use a bundled font instead of Minecraft's (also: .font off)");
     public final ModeSetting font = mode("Font", "Inter", "Inter", "Poppins", "Manrope", "JetBrains Mono", "Outfit")
@@ -32,7 +44,7 @@ public final class ClickGuiModule extends Module {
     public final BoolSetting descriptions = bool("Descriptions", true).desc("Show what the hovered option does");
     public final BoolSetting showBinds = bool("Show binds", true).desc("Show each module's key on its row");
     public final BoolSetting pauseGame = bool("Pause game", false).desc("Pause singleplayer while the GUI is open");
-    public final BoolSetting mainMenu = bool("Main menu card", true).desc("DonutWaffen card with GUI and Spotify buttons on the title screen");
+    public final BoolSetting mainMenu = bool("Main menu buttons", true).desc("Click GUI, Spotify and music buttons on the title screen");
 
     public ClickGuiModule() {
         super("ClickGUI", "Look and feel of this menu", Category.CLIENT);

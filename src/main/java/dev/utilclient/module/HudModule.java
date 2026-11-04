@@ -30,12 +30,11 @@ public final class HudModule extends Module {
             .desc("Theme follows the ClickGUI accent");
     private final BoolSetting backgrounds = bool("Backgrounds", true);
     private final NumberSetting bgOpacity = num("Background opacity", 140, 20, 255, 5).visible(backgrounds::get);
-    private final BoolSetting rounded = bool("Rounded", true).desc("Rounded corners on HUD boxes");
-    private final NumberSetting radius = num("Corner radius", 6, 1, 10, 1).visible(rounded::get);
-    private final BoolSetting watermarkInfo = bool("Watermark info", true).desc("FPS and ping next to the name");
+    private final ModeSetting shape = mode("Shape", "Round", "Round", "Rounded", "Square")
+            .desc("Round: pill-shaped boxes and circular keys. Rounded: corners set by Corner radius");
+    private final BoolSetting rounded = bool("Rounded", true).visible(() -> false);   // kept for old configs
+    private final NumberSetting radius = num("Corner radius", 6, 1, 10, 1).visible(() -> shape.is("Rounded"));
     private final BoolSetting lowercase = bool("Lowercase", false);
-    private final BoolSetting listInfo = bool("List mode info", true).desc("Show a module's mode next to its name");
-    private final ModeSetting listSort = mode("List order", "Length", "Length", "Alphabetical");
 
     public final List<Element> elements = new ArrayList<>();
     /** Set by the click GUI while the HUD editor is open: shows placeholder content. */
@@ -60,12 +59,55 @@ public final class HudModule extends Module {
         elements.add(new Element("Staff list", true, false, false, 4, 124, this::staff));
         elements.add(new Element("Spotify", true, false, false, 4, 40, this::spotify));
         elements.add(new Element("Music player", true, false, false, 4, 80, this::music));
+
+        // per-element options (right-click an element in the HUD editor)
+        wmInfo = el("Watermark").bool("Info", true, "FPS and ping next to the name");
+        wmVersion = el("Watermark").bool("Version", true, null);
+        listInfo = el("Module list").bool("Mode info", true, "Show a module's mode next to its name");
+        listSort = el("Module list").mode("Order", "Length", "Length", "Alphabetical");
+        listBars = el("Module list").bool("Side bar", true, "Accent line on each row");
+        coOther = el("Coordinates").bool("Other dimension", true, "Nether / Overworld coordinates");
+        coFacing = el("Coordinates").bool("Facing", true, null);
+        coDecimals = el("Coordinates").num("Decimals", 1, 0, 2, 1);
+        infSpeed = el("Info").bool("Speed", true, null);
+        infPing = el("Info").bool("Ping", true, null);
+        infFps = el("Info").bool("FPS", true, null);
+        arDurability = el("Armor").mode("Durability", "Percent", "Percent", "Bar", "Off");
+        arVertical = el("Armor").bool("Vertical", false, "Stack the pieces top to bottom");
+        arHands = el("Armor").bool("Hand items", false, "Also show main hand and offhand");
+        toHideZero = el("Totems").bool("Hide at 0", true, null);
+        tgDistance = el("Target HUD").bool("Distance", true, null);
+        tgBar = el("Target HUD").bool("Health bar", true, null);
+        poTime = el("Potions").bool("Time", true, null);
+        ksMouse = el("Keystrokes").bool("Mouse buttons", true, null);
+        ksCps = el("Keystrokes").bool("CPS", true, null);
+        ksSpace = el("Keystrokes").bool("Space bar", true, null);
+        stRows = el("Staff list").num("Max rows", 12, 1, 30, 1);
+        spElapsed = el("Spotify").bool("Elapsed time", true, null);
+        muBar = el("Music player").bool("Progress bar", true, null);
+    }
+
+    private BoolSetting wmInfo, wmVersion, listInfo, listBars, coOther, coFacing, infSpeed, infPing, infFps,
+            arVertical, arHands, toHideZero, tgDistance, tgBar, poTime, ksMouse, ksCps, ksSpace, spElapsed, muBar;
+    private ModeSetting listSort, arDurability;
+    private NumberSetting coDecimals, stRows;
+
+    private Element el(String id) {
+        for (Element e : elements) if (e.id.equals(id)) return e;
+        throw new IllegalArgumentException(id);
+    }
+
+    /** Lets other modules (e.g. RegionMap) add their own HUD element. */
+    public Element addElement(String id, boolean def, boolean right, boolean bottom, int offX, int offY, Painter painter) {
+        Element e = new Element(id, def, right, bottom, offX, offY, painter);
+        elements.add(e);
+        return e;
     }
 
     // ---- element model -------------------------------------------------------------------------
 
     @FunctionalInterface
-    interface Painter {
+    public interface Painter {
         /** Draws (unless dryRun) and returns {width, height}. */
         int[] paint(GuiGraphicsExtractor g, int x, int y, boolean alignRight, boolean dryRun);
     }
@@ -83,12 +125,35 @@ public final class HudModule extends Module {
 
         Element(String id, boolean def, boolean right, boolean bottom, int offX, int offY, Painter painter) {
             this.id = id;
-            this.on = bool(id, def);
+            this.on = HudModule.this.bool(id, def);
             this.right = right;
             this.bottom = bottom;
             this.offX = offX;
             this.offY = offY;
             this.painter = painter;
+        }
+
+        /** Options for just this element, edited in the HUD editor. */
+        public final List<Setting> opts = new ArrayList<>();
+
+        public BoolSetting bool(String label, boolean def, String desc) {
+            BoolSetting b = HudModule.this.bool(id + "/" + label, def);
+            if (desc != null) b.desc(desc);
+            return opt(b);
+        }
+
+        public NumberSetting num(String label, double def, double min, double max, double step) {
+            return opt(HudModule.this.num(id + "/" + label, def, min, max, step));
+        }
+
+        public ModeSetting mode(String label, String def, String... modes) {
+            return opt(HudModule.this.mode(id + "/" + label, def, modes));
+        }
+
+        private <S extends Setting> S opt(S s) {
+            s.group = id;
+            opts.add(s);
+            return s;
         }
 
         Element centered() { centered = true; return this; }
@@ -188,9 +253,21 @@ public final class HudModule extends Module {
         };
     }
 
-    private void bg(GuiGraphicsExtractor g, int x0, int y0, int x1, int y1) { bg(g, x0, y0, x1, y1, radius.getInt()); }
+    private void bg(GuiGraphicsExtractor g, int x0, int y0, int x1, int y1) { bg(g, x0, y0, x1, y1, cornerRadius()); }
 
-    public int cornerRadius() { return rounded.get() ? radius.getInt() : 0; }
+    /**
+     * Round: as round as the box allows (pills, circles) but capped at 9 on tall boxes so text never
+     * spills over the curve. Rounded: the Corner radius slider. Square: 0.
+     */
+    public int cornerRadius() {
+        return switch (shape.get()) {
+            case "Round" -> 9;
+            case "Square" -> 0;
+            default -> radius.getInt();
+        };
+    }
+
+    public boolean isRound() { return shape.is("Round"); }
 
     public int bgColor() { return Draw.alpha(0x0B0B10, backgrounds.get() ? bgOpacity.getInt() : 0); }
 
@@ -199,8 +276,8 @@ public final class HudModule extends Module {
     private void bg(GuiGraphicsExtractor g, int x0, int y0, int x1, int y1, int radius) {
         if (!backgrounds.get()) return;
         int c = Draw.alpha(0x0B0B10, bgOpacity.getInt());
-        if (rounded.get()) Draw.round(g, x0, y0, x1, y1, radius, c);
-        else g.fill(x0, y0, x1, y1, c);
+        if (shape.is("Square")) g.fill(x0, y0, x1, y1, c);
+        else Draw.round(g, x0, y0, x1, y1, shape.is("Round") ? (y1 - y0 <= 16 ? 99 : 9) : radius, c);
     }
 
     private static int ping() {
@@ -225,17 +302,18 @@ public final class HudModule extends Module {
     // ---- elements -------------------------------------------------------------------------------
 
     private int[] watermark(GuiGraphicsExtractor g, int x, int y, boolean right, boolean dry) {
-        String a = txt("DonutWaffen"), b = " " + dev.utilclient.UtilClient.version();
+        String a = txt("DonutWaffen"), b = wmVersion.get() ? " " + dev.utilclient.UtilClient.version() : "";
         String extra = "";
-        if (watermarkInfo.get()) {
+        if (wmInfo.get()) {
             int pg = ping();
             extra = "  |  " + RenderState.fps() + " fps" + (pg >= 0 ? "  |  " + pg + " ms" : "");
         }
         int w = Fonts.width(a, true) + Fonts.width(b) + Fonts.width(extra) + 12, h = 15;
         if (dry) return size(w, h);
-        bg(g, x, y, x + w, y + h, radius.getInt() + 1);
+        bg(g, x, y, x + w, y + h);
         // accent strip + the name in a per-letter gradient
-        Draw.round(g, x + 5, y + h - 2, x + w - 5, y + h - 1, 0, Draw.withAlpha(color(0f), 0.8f));
+        int inset = shape.is("Round") ? 9 : 5;
+        Draw.round(g, x + inset, y + h - 2, x + w - inset, y + h - 1, 0, Draw.withAlpha(color(0f), 0.8f));
         int cx = x + 6;
         for (int i = 0; i < a.length(); i++) {
             String ch = String.valueOf(a.charAt(i));
@@ -274,7 +352,7 @@ public final class HudModule extends Module {
         else shown.sort((p, q) -> Fonts.width(listLabel(q)) - Fonts.width(listLabel(p)));
 
         int maxW = 0;
-        for (Module m : shown) maxW = Math.max(maxW, Fonts.width(listLabel(m)) + 8);
+        for (Module m : shown) maxW = Math.max(maxW, Fonts.width(listLabel(m)) + 10);
         int rowH = 11;
         int h = 0;
         for (Module m : shown) h += (int) Math.ceil(rowH * Math.max(listAnim.getOrDefault(m, 1f), m == this ? 1f : 0f));
@@ -287,16 +365,23 @@ public final class HudModule extends Module {
             float e = 1f - (1f - a) * (1f - a);
             String label = listLabel(m);
             String name = txt(m.name);
-            int w = Fonts.width(label) + 8;
+            int w = Fonts.width(label) + 10;
             int slide = (int) ((1f - e) * (w + 4));
             int rx = alignRight ? x + maxW - w + slide : x - slide;
             int col = color(i * 0.06f);
-            bg(g, rx, cy, rx + w, cy + rowH, Math.max(2, radius.getInt() / 2));
-            if (alignRight) g.fill(rx + w - 1, cy, rx + w, cy + rowH, col);
-            else g.fill(rx, cy, rx + 1, cy + rowH, col);
-            Fonts.text(g, name, rx + 4, cy + 1, col);
+            bg(g, rx, cy, rx + w, cy + rowH, shape.is("Round") ? 99 : Math.max(2, radius.getInt() / 2));
+            if (listBars.get()) {
+                // a little accent dot/bar on the outside edge (a dot when rows are pills)
+                if (shape.is("Round")) {
+                    int dx = alignRight ? rx + w - 4 : rx + 2;
+                    Draw.round(g, dx, cy + 4, dx + 2, cy + 7, 1, col);
+                } else if (alignRight) g.fill(rx + w - 1, cy, rx + w, cy + rowH, col);
+                else g.fill(rx, cy, rx + 1, cy + rowH, col);
+            }
+            int tx = rx + (shape.is("Round") && listBars.get() && !alignRight ? 6 : 4);
+            Fonts.text(g, name, tx, cy + 1, col);
             if (label.length() > name.length()) {
-                Fonts.text(g, label.substring(name.length()), rx + 4 + Fonts.width(name), cy + 1, 0xFF9A9AAA);
+                Fonts.text(g, label.substring(name.length()), tx + Fonts.width(name), cy + 1, 0xFF9A9AAA);
             }
             cy += (int) Math.ceil(rowH * a);
             i++;
@@ -310,10 +395,15 @@ public final class HudModule extends Module {
         LocalPlayer p = mc.player;
         boolean nether = mc.level.dimension() == Level.NETHER;
         double scale = nether ? 8.0 : 0.125;
-        String main = String.format(Locale.ROOT, "XYZ %.1f %.1f %.1f", p.getX(), p.getY(), p.getZ());
-        String other = String.format(Locale.ROOT, "%s %.1f %.1f", nether ? "Overworld" : "Nether", p.getX() * scale, p.getZ() * scale);
+        String f = "%." + coDecimals.getInt() + "f";
+        String main = String.format(Locale.ROOT, "XYZ " + f + " " + f + " " + f, p.getX(), p.getY(), p.getZ());
+        String other = String.format(Locale.ROOT, "%s " + f + " " + f, nether ? "Overworld" : "Nether", p.getX() * scale, p.getZ() * scale);
         String facing = "Facing " + facing(p.getYRot()) + axisHint(p.getYRot());
-        String[] lines = {txt(facing), txt(other), txt(main)};
+        List<String> ls = new ArrayList<>();
+        if (coFacing.get()) ls.add(txt(facing));
+        if (coOther.get() && mc.level.dimension() != Level.END) ls.add(txt(other));
+        ls.add(txt(main));
+        String[] lines = ls.toArray(new String[0]);
         int w = 0;
         for (String s : lines) w = Math.max(w, Fonts.width(s));
         w += 8;
@@ -352,11 +442,12 @@ public final class HudModule extends Module {
         } catch (Throwable ignored) {
             // singleplayer edge cases
         }
-        String[] lines = {
-                txt(String.format(Locale.ROOT, "Speed %.1f b/s", speed)),
-                txt("Ping " + ping + "ms"),
-                txt("FPS " + RenderState.fps())
-        };
+        List<String> ls = new ArrayList<>();
+        if (infSpeed.get()) ls.add(txt(String.format(Locale.ROOT, "Speed %.1f b/s", speed)));
+        if (infPing.get()) ls.add(txt("Ping " + ping + "ms"));
+        if (infFps.get()) ls.add(txt("FPS " + RenderState.fps()));
+        if (ls.isEmpty()) return size(0, 0);
+        String[] lines = ls.toArray(new String[0]);
         int w = 0;
         for (String s : lines) w = Math.max(w, Fonts.width(s));
         w += 8;
@@ -374,21 +465,38 @@ public final class HudModule extends Module {
 
     private int[] armor(GuiGraphicsExtractor g, int x, int y, boolean right, boolean dry) {
         Minecraft mc = Minecraft.getInstance();
-        int w = 4 * 18, h = 26;
+        List<ItemStack> items = new ArrayList<>();
+        for (EquipmentSlot sl : ARMOR) items.add(mc.player.getItemBySlot(sl));
+        if (arHands.get()) {
+            items.add(mc.player.getMainHandItem());
+            items.add(mc.player.getOffhandItem());
+        }
+        boolean vert = arVertical.get();
+        boolean pct = arDurability.is("Percent"), bar = arDurability.is("Bar");
+        int cell = vert ? 17 : 18;
+        int extra = pct ? (vert ? 26 : 10) : bar ? 3 : 0;
+        int w = vert ? 16 + extra : items.size() * 18, h = vert ? items.size() * cell : 16 + extra;
         if (dry) return size(w, h);
-        for (int i = 0; i < 4; i++) {
-            ItemStack s = mc.player.getItemBySlot(ARMOR[i]);
-            int ix = x + i * 18;
+        for (int i = 0; i < items.size(); i++) {
+            ItemStack s = items.get(i);
+            int ix = vert ? x : x + i * 18, iy = vert ? y + i * cell : y;
             if (s.isEmpty()) {
-                if (editing) Draw.outline(g, ix, y, ix + 16, y + 16, 0x60FFFFFF);
+                if (editing) Draw.round(g, ix + 1, iy + 1, ix + 15, iy + 15, 99, 0x30FFFFFF);
                 continue;
             }
-            g.item(s, ix, y);
-            g.itemDecorations(mc.font, s, ix, y);
-            if (s.isDamageableItem()) {
-                float frac = 1f - s.getDamageValue() / (float) Math.max(1, s.getMaxDamage());
-                String pct = Math.round(frac * 100) + "%";
-                Fonts.text(g, pct, ix + 8 - Fonts.width(pct) / 2, y + 17, Draw.healthColor(frac));
+            g.item(s, ix, iy);
+            g.itemDecorations(mc.font, s, ix, iy);
+            if (!s.isDamageableItem()) continue;
+            float frac = 1f - s.getDamageValue() / (float) Math.max(1, s.getMaxDamage());
+            int col = Draw.healthColor(frac);
+            if (pct) {
+                String t = Math.round(frac * 100) + "%";
+                if (vert) Fonts.text(g, t, ix + 18, iy + 4, col);
+                else Fonts.text(g, t, ix + 8 - Fonts.width(t) / 2, iy + 17, col);
+            } else if (bar) {
+                int by = vert ? iy + 15 : iy + 17;
+                Draw.pill(g, ix + 1, by, ix + 15, by + 2, 0x60000000);
+                Draw.pill(g, ix + 1, by, ix + 1 + Math.max(2, (int) (14 * frac)), by + 2, col);
             }
         }
         return size(w, h);
@@ -397,7 +505,7 @@ public final class HudModule extends Module {
     private int[] totems(GuiGraphicsExtractor g, int x, int y, boolean right, boolean dry) {
         Minecraft mc = Minecraft.getInstance();
         int n = Inv.count(mc.player, Items.TOTEM_OF_UNDYING);
-        if (n == 0 && !editing) return size(0, 0);
+        if (n == 0 && !editing && toHideZero.get()) return size(0, 0);
         int w = 18 + Fonts.width(Integer.toString(n)) + 4, h = 16;
         if (dry) return size(w, h);
         g.item(new ItemStack(Items.TOTEM_OF_UNDYING), x, y);
@@ -412,22 +520,25 @@ public final class HudModule extends Module {
         if (t == null) return size(0, 0);
         int w = 130, h = 34;
         if (dry) return size(w, h);
-        Draw.soft(g, x, y, x + w, y + h, 0xC0101016);
-        g.fill(x, y, x + 2, y + h, color(0f));
+        bg(g, x, y, x + w, y + h);
+        Draw.round(g, x + 3, y + 8, x + 5, y + h - 8, 1, color(0f));
         String name = Fonts.fit(t.getName().getString(), w - 50);
-        Fonts.text(g, name, x + 7, y + 4, 0xFFFFFFFF, true);
+        Fonts.text(g, name, x + 9, y + 4, 0xFFFFFFFF, true);
         float hp = t.getHealth() + t.getAbsorptionAmount();
         float frac = Math.min(1f, t.getHealth() / Math.max(1f, t.getMaxHealth()));
         String hpText = String.format(Locale.ROOT, "%.1f", hp);
-        Fonts.text(g, hpText, x + w - 6 - Fonts.width(hpText), y + 4, Draw.healthColor(frac), true);
+        Fonts.text(g, hpText, x + w - 9 - Fonts.width(hpText), y + 4, Draw.healthColor(frac), true);
         String dist = String.format(Locale.ROOT, "%.1fm", mc.player.distanceTo(t));
-        Fonts.text(g, dist, x + 7, y + 15, 0xFFA0A0B0);
-        int barX = x + 7, barW = w - 14;
-        g.fill(barX, y + 26, barX + barW, y + 29, 0xFF2A2A36);
-        g.fill(barX, y + 26, barX + (int) (barW * frac), y + 29, Draw.healthColor(frac));
-        if (t.getAbsorptionAmount() > 0) {
-            int aw = (int) (barW * Math.min(1f, t.getAbsorptionAmount() / Math.max(1f, t.getMaxHealth())));
-            g.fill(barX, y + 25, barX + aw, y + 26, 0xFFFACC15);
+        if (tgDistance.get()) Fonts.text(g, dist, x + 9, y + 15, 0xFFA0A0B0);
+        if (tgBar.get()) {
+            int barX = x + 9, barW = w - 18;
+            Draw.pill(g, barX, y + 25, barX + barW, y + 29, 0xFF2A2A36);
+            int fw = (int) (barW * frac);
+            if (fw > 3) Draw.pill(g, barX, y + 25, barX + fw, y + 29, Draw.healthColor(frac));
+            if (t.getAbsorptionAmount() > 0) {
+                int aw = (int) (barW * Math.min(1f, t.getAbsorptionAmount() / Math.max(1f, t.getMaxHealth())));
+                if (aw > 3) Draw.pill(g, barX, y + 23, barX + aw, y + 25, 0xFFFACC15);
+            }
         }
         return size(w, h);
     }
@@ -440,7 +551,7 @@ public final class HudModule extends Module {
             if (e.getAmplifier() > 0) name += " " + (e.getAmplifier() + 1);
             int d = e.getDuration();
             String time = d < 0 || d > 20 * 60 * 60 ? "**:**" : String.format(Locale.ROOT, "%d:%02d", d / 1200, (d / 20) % 60);
-            lines.add(txt(name + " " + time));
+            lines.add(txt(poTime.get() ? name + " " + time : name));
         }
         if (lines.isEmpty() && editing) lines.add("Potions");
         if (lines.isEmpty()) return size(0, 0);
@@ -467,7 +578,7 @@ public final class HudModule extends Module {
         String count = String.valueOf(list.size());
         int rankW = 0, nameW = 0;
         for (var st : list) { rankW = Math.max(rankW, Fonts.width(txt(st.rank()))); nameW = Math.max(nameW, Fonts.width(st.name())); }
-        int shown = Math.min(list.size(), 12);
+        int shown = Math.min(list.size(), stRows.getInt());
         int w = Math.max(Fonts.width(head, true) + Fonts.width(count) + 26, rankW + nameW + 22), h = 17 + shown * 10 + 3;
         if (dry) return size(w, h);
         bg(g, x, y, x + w, y + h);
@@ -507,8 +618,8 @@ public final class HudModule extends Module {
         int textW = Math.max(110, Math.min(170, Math.max(Fonts.width(title, true), Fonts.width(sub)) + 4));
         int w = 8 + 26 + 7 + textW + 8, h = progress >= 0 ? 42 : 34;
         if (dry) return size(w, h);
-        bg(g, x, y, x + w, y + h, radius.getInt() + 1);
-        int r = Math.max(3, cornerRadius() - 1);
+        bg(g, x, y, x + w, y + h);
+        int r = isRound() ? 99 : Math.max(3, cornerRadius() - 1);
         // cover tile
         int tx = x + 4, ty = y + 4;
         Draw.round(g, tx, ty, tx + 26, ty + 26, r, tile);
@@ -552,7 +663,7 @@ public final class HudModule extends Module {
             return size(0, 0);
         }
         int[] r = nowPlaying(g, x, y, dry, title, sub, 0xFF1DB954, playing, -1, null, null);
-        if (!dry && playing) {
+        if (!dry && playing && spElapsed.get()) {
             String tag = playing ? time(System.currentTimeMillis() - dev.utilclient.music.Spotify.trackSince()) : "paused";
             Fonts.text(g, tag, x + r[0] - 6 - Fonts.width(tag), y + 18, 0xFF1DB954);
         }
@@ -569,7 +680,7 @@ public final class HudModule extends Module {
         long pos = dev.utilclient.music.MusicPlayer.positionMs(), len = dev.utilclient.music.MusicPlayer.lengthMs();
         float prog = len > 0 ? pos / (float) len : 0f;
         int tile = Draw.mix(color(0f), 0xFF000000, 0.15f);
-        return nowPlaying(g, x, y, dry, title, sub, tile, playing, prog, time(pos), time(pos) + " / " + time(len));
+        return nowPlaying(g, x, y, dry, title, sub, tile, playing, muBar.get() ? prog : -1, time(pos), time(pos) + " / " + time(len));
     }
 
     // ---- keystrokes -----------------------------------------------------------------------------
@@ -592,6 +703,7 @@ public final class HudModule extends Module {
     private void mouseKey(GuiGraphicsExtractor g, int x, int y, int w, int h, String label, int cps, boolean down) {
         key(g, x, y, w, h, "", down);
         int fg = down ? 0xFF101014 : 0xFFE6E6EE;
+        if (!ksCps.get()) { Fonts.centered(g, label, x + w / 2, y + h / 2 - 4, fg, true); return; }
         Fonts.centered(g, label, x + w / 2, y + 3, fg, true);
         Fonts.centered(g, cps + " CPS", x + w / 2, y + 13, down ? 0xFF2A2A30 : 0xFF9A9AB0, false);
     }
@@ -600,13 +712,14 @@ public final class HudModule extends Module {
         float t = 0f;
         if (down) t = 1f;
         int fill = down ? Draw.withAlpha(color(0f), 0.85f) : Draw.alpha(0x0B0B10, bgOpacity.getInt());
-        if (rounded.get()) Draw.round(g, x, y, x + w, y + h, Math.max(3, radius.getInt() - 1), fill);
+        if (!shape.is("Square")) Draw.round(g, x, y, x + w, y + h, shape.is("Round") ? 99 : Math.max(3, radius.getInt() - 1), fill);
         else g.fill(x, y, x + w, y + h, fill);
         Fonts.centered(g, label, x + w / 2, y + h / 2 - 4, down ? 0xFF101014 : 0xFFE6E6EE, t > 0.5f);
     }
 
     private int[] keystrokes(GuiGraphicsExtractor g, int x, int y, boolean right, boolean dry) {
-        int k = 18, mk = 24, gap = 2, w = k * 3 + gap * 2, h = k * 2 + mk + gap * 3 + 8;
+        int k = 18, mk = ksCps.get() ? 24 : 18, gap = 2, w = k * 3 + gap * 2;
+        int h = k * 2 + gap + (ksMouse.get() ? mk + gap : 0) + (ksSpace.get() ? 8 + gap : 0);
         if (dry) return size(w, h);
         Minecraft mc = Minecraft.getInstance();
         var o = mc.options;
@@ -614,11 +727,16 @@ public final class HudModule extends Module {
         key(g, x, y + k + gap, k, k, "A", o.keyLeft.isDown());
         key(g, x + k + gap, y + k + gap, k, k, "S", o.keyDown.isDown());
         key(g, x + (k + gap) * 2, y + k + gap, k, k, "D", o.keyRight.isDown());
-        int half = (w - gap) / 2;
-        // left half = attack (LMB), right half = use (RMB), each with its own CPS
-        mouseKey(g, x, y + (k + gap) * 2, half, mk, "LMB", cps(LEFT), o.keyAttack.isDown());
-        mouseKey(g, x + half + gap, y + (k + gap) * 2, w - half - gap, mk, "RMB", cps(RIGHT), o.keyUse.isDown());
-        key(g, x, y + (k + gap) * 2 + mk + gap, w, 8, "", o.keyJump.isDown());
+        int cy = y + (k + gap) * 2;
+        if (ksMouse.get()) {
+            // left half = attack (LMB), right half = use (RMB), each with its own CPS
+            int half = (w - gap) / 2;
+            mouseKey(g, x, cy, half, mk, "LMB", cps(LEFT), o.keyAttack.isDown());
+            mouseKey(g, x + half + gap, cy, w - half - gap, mk, "RMB", cps(RIGHT), o.keyUse.isDown());
+            cy += mk + gap;
+        }
+        if (ksSpace.get()) key(g, x, cy, w, 8, "", o.keyJump.isDown());
         return size(w, h);
     }
+
 }

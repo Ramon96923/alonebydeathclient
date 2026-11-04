@@ -12,6 +12,8 @@ import java.util.function.BooleanSupplier;
 public abstract class Setting {
     public final String name;
     public String description = "";
+    /** HUD element this option belongs to (shown in the HUD editor, not the module panel), or null. */
+    public String group;
     private BooleanSupplier visible = () -> true;
     private final Runnable onChange;
 
@@ -23,6 +25,12 @@ public abstract class Setting {
     protected void changed() {
         if (onChange != null) onChange.run();
         ModuleManager.markDirty();
+    }
+
+    /** Name to show: without the "Element/" prefix of HUD element options. */
+    public String label() {
+        int i = name.indexOf('/');
+        return group != null && i >= 0 ? name.substring(i + 1) : name;
     }
 
     public boolean isVisible() {

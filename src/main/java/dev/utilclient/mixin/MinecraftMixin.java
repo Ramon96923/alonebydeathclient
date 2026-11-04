@@ -6,6 +6,7 @@ import net.minecraft.world.phys.HitResult;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /** Spear: a left-click that hits nothing (air) can trigger a sprint lunge. */
@@ -20,5 +21,11 @@ public abstract class MinecraftMixin {
         } catch (Throwable ignored) {
             // input must never break
         }
+    }
+
+    /** Window title: "DonutWaffen 3.2.2 - Minecraft 26.3 ..." */
+    @ModifyArg(method = "updateTitle", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/platform/Window;setTitle(Ljava/lang/String;)V"))
+    private String dw$title(String title) {
+        return "DonutWaffen " + dev.utilclient.UtilClient.version() + " - " + title;
     }
 }

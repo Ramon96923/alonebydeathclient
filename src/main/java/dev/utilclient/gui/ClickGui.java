@@ -123,7 +123,7 @@ public class ClickGui extends Screen {
         vh = (int) (height / s);
     }
 
-    private int r() { return theme().radius.getInt(); }
+    private int r() { return theme().cornerRadius(); }
 
     private static ClickGuiModule theme() { return ModuleManager.CLICK_GUI; }
 
@@ -407,12 +407,21 @@ public class ClickGui extends Screen {
         float on = approach(m, m.isEnabled() ? 1f : 0f, 7f);
         boolean hover = canHover && mx >= x && mx < x + pw && my >= y && my < y + MODULE_H && inClip(y, y + MODULE_H);
 
+        boolean round = theme().shape.is("Round");
         if (on > 0f) {
-            g.fill(x, y, x + (int) (pw * ease(on)), y + MODULE_H, Draw.withAlpha(acc, 0.22f * on + 0.06f));
-            g.fill(x, y, x + 2, y + MODULE_H, Draw.withAlpha(acc, on));
+            if (round) {
+                // enabled modules become a pill that grows in from the left
+                int px1 = x + 3 + (int) ((pw - 6) * ease(on));
+                if (px1 > x + 8) Draw.pill(g, x + 3, y + 1, px1, y + MODULE_H - 1, Draw.withAlpha(acc, 0.26f * on + 0.06f));
+                Draw.round(g, x + 4, y + 4, x + 6, y + MODULE_H - 4, 1, Draw.withAlpha(acc, on));
+            } else {
+                g.fill(x, y, x + (int) (pw * ease(on)), y + MODULE_H, Draw.withAlpha(acc, 0.22f * on + 0.06f));
+                g.fill(x, y, x + 2, y + MODULE_H, Draw.withAlpha(acc, on));
+            }
         }
         if (hover) {
-            g.fill(x, y, x + pw, y + MODULE_H, HOVER);
+            if (round) Draw.pill(g, x + 3, y + 1, x + pw - 3, y + MODULE_H - 1, HOVER);
+            else g.fill(x, y, x + pw, y + MODULE_H, HOVER);
             hoverDescription = m.description;
         }
         int textColor = Draw.mix(DIM, 0xFFFFFFFF, on);
@@ -457,15 +466,28 @@ public class ClickGui extends Screen {
 
     private int settingsHeight(Module m) {
         int h = ROW_H + 2;   // bind row + gap
-        for (Setting s : m.settings) if (s.isVisible()) h += settingHeight(s);
+        for (Setting s : m.settings) if (s.group == null && s.isVisible()) h += settingHeight(s);
         return h;
     }
 
     private void renderSettings(GuiGraphicsExtractor g, Module m, int x, int y, int pw, int mx, int my, boolean canHover) {
+        java.util.List<Setting> list = new java.util.ArrayList<>();
+        for (Setting s : m.settings) if (s.group == null) list.add(s);   // HUD element options live in the HUD editor
+        y = renderSettingRows(g, list, x, y, pw, mx, my, canHover);
+        renderBindRow(g, m, x, y, pw, mx, my, canHover);
+    }
+
+    private int rowsHeight(java.util.List<Setting> list) {
+        int h = 0;
+        for (Setting s : list) if (s.isVisible()) h += settingHeight(s);
+        return h;
+    }
+
+    private int renderSettingRows(GuiGraphicsExtractor g, java.util.List<Setting> list, int x, int y, int pw, int mx, int my, boolean canHover) {
         int ix = x + 8;
         int iw = pw - 14;
         int acc = accent(panelIndex * 0.08f);
-        for (Setting s : m.settings) {
+        for (Setting s : list) {
             if (!s.isVisible()) continue;
             if (s instanceof ColorSetting c) {
                 approach("pick:" + System.identityHashCode(c), PICKERS.contains(c) ? 1f : 0f, 6f);
@@ -473,12 +495,13 @@ public class ClickGui extends Screen {
             int h = settingHeight(s);
             boolean hover = canHover && inClip(y, y + h) && mx >= x && mx < x + pw && my >= y && my < y + Math.min(h, s instanceof ColorSetting ? ROW_H : h);
             if (hover) {
-                g.fill(x + 4, y, x + pw, y + Math.min(h, ROW_H + (s instanceof NumberSetting ? 5 : 0)), HOVER);
+                if (theme().shape.is("Round")) Draw.pill(g, x + 4, y, x + pw - 2, y + Math.min(h, ROW_H + (s instanceof NumberSetting ? 4 : 0)), HOVER);
+                else g.fill(x + 4, y, x + pw, y + Math.min(h, ROW_H + (s instanceof NumberSetting ? 5 : 0)), HOVER);
                 if (!s.description.isEmpty()) hoverDescription = s.description;
             }
             if (s instanceof BoolSetting b) {
                 float t = approach(b, b.get() ? 1f : 0f, 8f);
-                Fonts.text(g, Fonts.fit(s.name, iw - 22), ix, y + 2, Draw.mix(DIM, TEXT, t));
+                Fonts.text(g, Fonts.fit(s.label(), iw - 22), ix, y + 2, Draw.mix(DIM, TEXT, t));
                 int sx = x + pw - 22, sy = y + 2;
                 Draw.pill(g, sx, sy, sx + 16, sy + 8, Draw.mix(TRACK, acc, t));
                 int kx = sx + 1 + (int) (8 * ease(t));
@@ -486,7 +509,7 @@ public class ClickGui extends Screen {
                 if (inClip(y, y + h)) hits.add(new Hit(x, y, x + pw, y + h, Type.SETTING, s, null));
             } else if (s instanceof NumberSetting n) {
                 String v = n.valueText();
-                Fonts.text(g, Fonts.fit(s.name, iw - Fonts.width(v) - 6), ix, y + 2, TEXT);
+                Fonts.text(g, Fonts.fit(s.label(), iw - Fonts.width(v) - 6), ix, y + 2, TEXT);
                 Fonts.text(g, v, x + pw - 6 - Fonts.width(v), y + 2, acc);
                 int bx = ix, bw = x + pw - 6 - ix, by = y + 12;
                 Draw.pill(g, bx, by, bx + bw, by + 2, TRACK);
@@ -497,7 +520,7 @@ public class ClickGui extends Screen {
                 if (inClip(y, y + h)) hits.add(new Hit(x, y, x + pw, y + h, Type.SETTING, s, null));
             } else if (s instanceof ModeSetting md) {
                 String v = md.get();
-                Fonts.text(g, Fonts.fit(s.name, iw - Fonts.width(v) - 6), ix, y + 2, TEXT);
+                Fonts.text(g, Fonts.fit(s.label(), iw - Fonts.width(v) - 6), ix, y + 2, TEXT);
                 Fonts.text(g, v, x + pw - 6 - Fonts.width(v), y + 2, acc);
                 if (inClip(y, y + h)) hits.add(new Hit(x, y, x + pw, y + ROW_H, Type.SETTING, s, null));
             } else if (s instanceof dev.utilclient.module.StringSetting str) {
@@ -514,14 +537,19 @@ public class ClickGui extends Screen {
             } else if (s instanceof ColorSetting c) {
                 Fonts.text(g, Fonts.fit(s.name, iw - 24), ix, y + 2, TEXT);
                 int sx = x + pw - 18;
-                Draw.round(g, sx - 1, y + 1, sx + 12, y + 11, 3, 0x80FFFFFF);
-                Draw.round(g, sx, y + 2, sx + 11, y + 10, 3, c.get() | 0xFF000000);
+                Draw.round(g, sx - 1, y + 1, sx + 12, y + 11, 99, 0x80FFFFFF);
+                Draw.round(g, sx, y + 2, sx + 11, y + 10, 99, c.get() | 0xFF000000);
                 if (inClip(y, y + ROW_H)) hits.add(new Hit(x, y, x + pw, y + ROW_H, Type.SETTING, s, null));
                 if (h > ROW_H) renderPicker(g, c, ix, y + ROW_H, x + pw - 6 - ix, h - ROW_H);
             }
             y += h;
         }
-        // bind row
+        return y;
+    }
+
+    private void renderBindRow(GuiGraphicsExtractor g, Module m, int x, int y, int pw, int mx, int my, boolean canHover) {
+        int ix = x + 8;
+        int acc = accent(panelIndex * 0.08f);
         boolean hover = canHover && inClip(y, y + ROW_H) && mx >= x && mx < x + pw && my >= y && my < y + ROW_H;
         if (hover) {
             g.fill(x + 4, y, x + pw, y + ROW_H, HOVER);
@@ -632,18 +660,26 @@ public class ClickGui extends Screen {
                 int col = (hover || dragElement == e) ? acc : 0x70FFFFFF;
                 g.fill(e.x, e.y, e.x + e.w, e.y + e.h, hover ? Draw.withAlpha(acc, 0.12f) : 0x10FFFFFF);
                 Draw.outline(g, e.x - 1, e.y - 1, e.x + e.w + 1, e.y + e.h + 1, col);
-                if (hover) Fonts.text(g, e.id, e.x, Math.max(0, e.y - 10), acc);
+                if (hover) Fonts.text(g, e.id + (e.opts.isEmpty() ? "" : "  -  right-click for options"), e.x, Math.max(0, e.y - 10), acc);
                 hits.add(new Hit(e.x, e.y, e.x + e.w, e.y + e.h, Type.ELEMENT, e, null));
             }
         }
 
         // element toggles
-        int pw = 120, x = 10, y = 26;
+        int pw = 132, x = 10, y = 26;
         Draw.round(g, x, y, x + pw, y + HEADER_H, r(), acc, true, false);
         Fonts.text(g, "HUD elements", x + 6, y + 3, 0xFFFFFFFF, true);
         int cy = y + HEADER_H;
-        Draw.round(g, x, cy, x + pw, cy + hud.elements.size() * ROW_H + 4, r(), panelBg(), false, true);
+        int bodyH = 4;
+        for (HudModule.Element e : hud.elements) {
+            bodyH += ROW_H;
+            if (OPEN_ELEMENTS.contains(e.id)) bodyH += rowsHeight(e.opts) + 2;
+        }
+        Draw.round(g, x, cy, x + pw, cy + bodyH, r(), panelBg(), false, true);
         cy += 2;
+        int savedTop = clipTop, savedBottom = clipBottom;
+        clipTop = 0;
+        clipBottom = vh;
         for (HudModule.Element e : hud.elements) {
             boolean hover = mx >= x && mx < x + pw && my >= cy && my < cy + ROW_H;
             if (hover) g.fill(x, cy, x + pw, cy + ROW_H, HOVER);
@@ -653,10 +689,24 @@ public class ClickGui extends Screen {
             Draw.pill(g, sx, sy, sx + 16, sy + 8, Draw.mix(TRACK, acc, t));
             int kx = sx + 1 + (int) (8 * ease(t));
             Draw.pill(g, kx, sy + 1, kx + 6, sy + 7, 0xFFFFFFFF);
+            if (!e.opts.isEmpty()) {
+                boolean open = OPEN_ELEMENTS.contains(e.id);
+                Fonts.text(g, open ? "-" : "+", x + pw - 32, cy + 2, open ? acc : DIM);
+                if (hover) hoverDescription = "Left-click: show/hide. Right-click: options for " + e.id;
+            }
             hits.add(new Hit(x, cy, x + pw, cy + ROW_H, Type.ELEMENT_TOGGLE, e, null));
             cy += ROW_H;
+            if (OPEN_ELEMENTS.contains(e.id)) {
+                g.fill(x + 6, cy, x + 7, cy + rowsHeight(e.opts), Draw.withAlpha(acc, 0.6f));
+                cy = renderSettingRows(g, e.opts, x + 4, cy, pw - 4, mx, my, true) + 2;
+            }
         }
+        clipTop = savedTop;
+        clipBottom = savedBottom;
     }
+
+    /** HUD elements whose options are expanded in the HUD editor. */
+    private static final java.util.Set<String> OPEN_ELEMENTS = new java.util.HashSet<>();
 
     // ---- input ---------------------------------------------------------------------------------
 
@@ -787,9 +837,15 @@ public class ClickGui extends Screen {
                     dragElement = e;
                     elemDX = (int) mx - e.x;
                     elemDY = (int) my - e.y;
+                } else if (right && !e.opts.isEmpty()) {
+                    if (!OPEN_ELEMENTS.remove(e.id)) OPEN_ELEMENTS.add(e.id);
                 }
             }
-            case ELEMENT_TOGGLE -> ((HudModule.Element) h.a).on.toggle();
+            case ELEMENT_TOGGLE -> {
+                HudModule.Element e = (HudModule.Element) h.a;
+                if (right && !e.opts.isEmpty()) { if (!OPEN_ELEMENTS.remove(e.id)) OPEN_ELEMENTS.add(e.id); }
+                else if (left) e.on.toggle();
+            }
             case HUD_ENABLE -> ModuleManager.HUD.setEnabled(true);
             case BODY -> { }
         }

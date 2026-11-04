@@ -16,13 +16,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * The AloneByDeath card on the title screen: client name and version, a button that opens the click GUI
+ * The DonutWaffen card on the title screen: client name and version, a button that opens the click GUI
  * right on the menu, and a link to AloneByDeath's Spotify. Drawn on top of the vanilla title screen, so the
  * normal buttons (and other mods' buttons) keep working. Switch it off in ClickGUI > Main menu card.
  */
 public final class MainMenu {
     public static final String SPOTIFY = "https://open.spotify.com/artist/0MVEjD74djJKq2ZJcNniE7";
-    private static final Logger LOG = Logger.getLogger("alonebydeathclient");
+    private static final Logger LOG = Logger.getLogger("donutwaffen");
     private static final int SPOTIFY_GREEN = 0xFF1DB954;
     private static final int CARD = 0x0E0E14;
 
@@ -115,7 +115,7 @@ public final class MainMenu {
 
         int acc = ModuleManager.CLICK_GUI.accent(0f);
         int r = Math.max(3, ModuleManager.CLICK_GUI.radius.getInt());
-        String title = "AloneByDeath";
+        String title = "DonutWaffen";
         String sub = "CLIENT  ·  v" + UtilClient.version() + "  ·  " + ModuleManager.ALL.size() + " modules";
         String guiLabel = "Open Click GUI";
         String guiKey = Keys.name(UtilClient.guiKey());

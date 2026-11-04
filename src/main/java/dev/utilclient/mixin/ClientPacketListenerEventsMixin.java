@@ -20,6 +20,9 @@ public abstract class ClientPacketListenerEventsMixin {
         if (!UtilClient.isMainThread()) return;
         try {
             ModuleManager.POP_COUNTER.onEntityEvent(packet);
+            var mc = net.minecraft.client.Minecraft.getInstance();
+            if (packet.getEventId() == net.minecraft.world.entity.EntityEvent.PROTECTED_FROM_DEATH && mc.level != null
+                    && packet.getEntity(mc.level) == mc.player) ModuleManager.AUTO_DOUBLE_HAND.onOwnPop();
         } catch (Throwable ignored) {
             // never break packet handling
         }

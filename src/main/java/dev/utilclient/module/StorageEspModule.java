@@ -41,6 +41,10 @@ public final class StorageEspModule extends Module {
     private final ColorSetting shulkerColor = color("Shulker colour", 0xFFF472B6).visible(shulkers::get);
     private final BoolSetting enderChests = bool("Ender chests", true);
     private final ColorSetting enderColor = color("Ender colour", 0xFFA855F7).visible(enderChests::get);
+    private final BoolSetting spawners = bool("Spawners", true).desc("DonutSMP's money makers: a sure sign of a base");
+    private final ColorSetting spawnerColor = color("Spawner colour", 0xFFEF4444).visible(spawners::get);
+    private final BoolSetting spawnerAlert = bool("Spawner alert", true).desc("Chime + chat when a new spawner shows up")
+            .visible(spawners::get);
     private final BoolSetting hoppers = bool("Hoppers", false);
     private final BoolSetting furnaces = bool("Furnaces", false);
     private final BoolSetting dispensers = bool("Dispensers", false);
@@ -53,6 +57,7 @@ public final class StorageEspModule extends Module {
 
     private List<Box> boxes = List.of();
     private final Set<Long> alerted = new HashSet<>();
+    private final Set<Long> seenSpawners = new HashSet<>();
     private ClientLevel level;
     private int timer;
     private boolean warned;
@@ -68,6 +73,7 @@ public final class StorageEspModule extends Module {
         if (be instanceof BarrelBlockEntity) return barrels.get() ? barrelColor.get() : 0;
         if (be instanceof ShulkerBoxBlockEntity) return shulkers.get() ? shulkerColor.get() : 0;
         if (be instanceof EnderChestBlockEntity) return enderChests.get() ? enderColor.get() : 0;
+        if (be.getBlockState().is(net.minecraft.world.level.block.Blocks.SPAWNER)) return spawners.get() ? spawnerColor.get() : 0;
         if (be instanceof HopperBlockEntity) return hoppers.get() ? otherColor.get() : 0;
         if (be instanceof AbstractFurnaceBlockEntity) return furnaces.get() ? otherColor.get() : 0;
         if (be instanceof DispenserBlockEntity) return dispensers.get() ? otherColor.get() : 0;
@@ -76,7 +82,7 @@ public final class StorageEspModule extends Module {
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.level != level) { level = mc.level; alerted.clear(); }
+        if (mc.level != level) { level = mc.level; alerted.clear(); seenSpawners.clear(); }
         if (timer-- > 0) return;
         timer = 10;
         int view = Math.max(2, mc.options.getEffectiveRenderDistance());
@@ -101,6 +107,11 @@ public final class StorageEspModule extends Module {
                     int c = colorFor(be);
                     if (c == 0) continue;
                     BlockPos p = be.getBlockPos();
+                    if (spawnerAlert.get() && be.getBlockState().is(net.minecraft.world.level.block.Blocks.SPAWNER)
+                            && seenSpawners.add(p.asLong())) {
+                        Chat.info("\u00a7cSpawner \u00a77at \u00a7f" + p.getX() + ", " + p.getY() + ", " + p.getZ());
+                        Chat.ping();
+                    }
                     boolean small = be instanceof ChestBlockEntity || be instanceof EnderChestBlockEntity;
                     AABB box = small
                             ? new AABB(p.getX() + 0.0625, p.getY(), p.getZ() + 0.0625, p.getX() + 0.9375, p.getY() + 0.875, p.getZ() + 0.9375)

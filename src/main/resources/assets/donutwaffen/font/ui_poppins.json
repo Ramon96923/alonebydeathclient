@@ -2,12 +2,12 @@
   "providers": [
     {
       "type": "ttf",
-      "file": "alonebydeathclient:jetbrains_regular.ttf",
-      "size": 8.2,
+      "file": "donutwaffen:poppins_regular.ttf",
+      "size": 8.5,
       "oversample": 4.0,
       "shift": [
         0.0,
-        0.0
+        -0.5
       ]
     },
     {

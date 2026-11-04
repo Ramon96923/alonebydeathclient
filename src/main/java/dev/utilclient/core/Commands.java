@@ -61,6 +61,13 @@ public final class Commands {
             case "gui", "clickgui" -> UtilClient.openGuiNextTick();
             case "font" -> font(a);
             case "macro", "macros", "m" -> macro(a);
+            case "coords", "pos" -> {
+                var p = Minecraft.getInstance().player;
+                if (p == null) return;
+                String c = p.getBlockX() + " " + p.getBlockY() + " " + p.getBlockZ();
+                Minecraft.getInstance().keyboardHandler.setClipboard(c);
+                Chat.info("Copied " + c + " to your clipboard.");
+            }
             default -> Chat.error("Unknown command '" + cmd + "'. Type " + prefix + "help");
         }
     }
@@ -82,6 +89,7 @@ public final class Commands {
         Chat.info(p + "vclip <blocks> / hclip <blocks>  -  teleport up/forward");
         Chat.info(p + "font on|off  -  custom GUI font");
         Chat.info(p + "gui  -  open the click GUI");
+        Chat.info(p + "coords  -  copy your coordinates");
         Chat.info(p + "macro add <command>  -  bind a command to a key (chain with &&)");
         Chat.info(p + "macro list | del <number> | clear | donut  -  manage macros / DonutSMP presets");
     }
@@ -133,6 +141,15 @@ public final class Commands {
             return;
         }
         if (a.length < 3) throw new IllegalArgumentException("usage: " + prefix + "set <module> <setting> <value>");
+        // text settings take the rest of the line, spaces included: .set rtpbasefinder command /rtp east
+        for (int k = 2; k < a.length; k++) {
+            Setting t = m.setting(String.join("", Arrays.copyOfRange(a, 1, k)));
+            if (t instanceof dev.utilclient.module.StringSetting str) {
+                str.set(String.join(" ", Arrays.copyOfRange(a, k, a.length)));
+                Chat.info(m.name + " " + str.name + " = " + str.valueText());
+                return;
+            }
+        }
         String settingName = String.join("", Arrays.copyOfRange(a, 1, a.length - 1));
         Setting s = m.setting(settingName);
         if (s == null) throw new IllegalArgumentException(m.name + " has no setting '" + settingName + "'");

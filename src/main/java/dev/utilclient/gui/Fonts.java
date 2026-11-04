@@ -15,11 +15,11 @@ import java.util.List;
 import java.util.logging.Logger;
 
 /**
- * Text drawing for the client. Uses the bundled Outfit TrueType font (assets/alonebydeathclient/font)
+ * Text drawing for the client. Uses the bundled Outfit TrueType font (assets/donutwaffen/font)
  * through Minecraft's own font system, and falls back to the vanilla font if anything is off.
  */
 public final class Fonts {
-    private static final Logger LOG = Logger.getLogger("alonebydeathclient");
+    private static final Logger LOG = Logger.getLogger("donutwaffen");
 
     private static Style regular, bold;
     private static String family;                       // which family regular/bold belong to
@@ -55,8 +55,8 @@ public final class Fonts {
         family = base;
         checks = 0;
         try {
-            regular = styleFor(Identifier.fromNamespaceAndPath("alonebydeathclient", base));
-            bold = styleFor(Identifier.fromNamespaceAndPath("alonebydeathclient", base + "_bold"));
+            regular = styleFor(Identifier.fromNamespaceAndPath("donutwaffen", base));
+            bold = styleFor(Identifier.fromNamespaceAndPath("donutwaffen", base + "_bold"));
         } catch (Throwable t) {
             LOG.warning("Font " + base + " unavailable, using the vanilla font: " + t);
             BROKEN.add(base);

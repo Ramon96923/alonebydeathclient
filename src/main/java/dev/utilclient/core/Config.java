@@ -24,10 +24,10 @@ import java.util.stream.Stream;
 
 /**
  * Saves everything (module toggles, settings, binds, GUI/HUD layout, friends, prefix) to
- * .minecraft/config/alonebydeathclient/config.json. Profiles live in the profiles/ folder next to it.
+ * .minecraft/config/donutwaffen/config.json. Profiles live in the profiles/ folder next to it.
  */
 public final class Config {
-    private static final Logger LOG = Logger.getLogger("alonebydeathclient");
+    private static final Logger LOG = Logger.getLogger("donutwaffen");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final int VERSION = 2;
 
@@ -35,7 +35,25 @@ public final class Config {
 
     private Config() {}
 
-    public static Path dir() { return FabricLoader.getInstance().getConfigDir().resolve("alonebydeathclient"); }
+    public static Path dir() { return FabricLoader.getInstance().getConfigDir().resolve("donutwaffen"); }
+
+    /** First launch after the rename: carry settings over from the old AloneByDeath config folder. */
+    private static void migrateOldFolder() {
+        try {
+            Path old = FabricLoader.getInstance().getConfigDir().resolve("alonebydeath" + "client");   // pre-3.0 name
+            if (!java.nio.file.Files.isDirectory(old) || java.nio.file.Files.exists(dir())) return;
+            try (var paths = java.nio.file.Files.walk(old)) {
+                for (Path from : (Iterable<Path>) paths::iterator) {
+                    Path to = dir().resolve(old.relativize(from).toString());
+                    if (java.nio.file.Files.isDirectory(from)) java.nio.file.Files.createDirectories(to);
+                    else java.nio.file.Files.copy(from, to);
+                }
+            }
+            LOG.info("Copied settings from the old AloneByDeath config folder to config/donutwaffen");
+        } catch (Exception e) {
+            LOG.warning("Couldn't copy old settings: " + e);
+        }
+    }
 
     private static Path mainFile() { return dir().resolve("config.json"); }
 
@@ -44,6 +62,7 @@ public final class Config {
     // ---- main config ---------------------------------------------------------------------------
 
     public static void load() {
+        migrateOldFolder();
         Path f = mainFile();
         if (!Files.exists(f)) {
             ModuleManager.applyDefaults();

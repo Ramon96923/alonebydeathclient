@@ -44,6 +44,14 @@ public final class ColorSetting extends Setting {
         changed();
     }
 
+    /** Sets an exact ARGB colour (turns rainbow off). */
+    public void setArgb(int argb) {
+        float[] hsv = dev.utilclient.util.Draw.rgbToHsv(argb);
+        rainbow = false;
+        alpha = ((argb >>> 24) & 0xFF) / 255f;
+        setHsv(hsv[0], hsv[1], hsv[2]);
+    }
+
     public void setAlpha(float a) { alpha = clamp01(a); changed(); }
 
     public void setRainbow(boolean r) { rainbow = r; changed(); }

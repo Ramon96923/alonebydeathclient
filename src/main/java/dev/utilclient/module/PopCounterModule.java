@@ -27,6 +27,9 @@ public final class PopCounterModule extends Module {
 
     @Override protected void onDisable() { pops.clear(); names.clear(); }
 
+    /** Totems this player has popped since they last died (0 if none or PopCounter is off). */
+    public int pops(UUID id) { return isEnabled() ? pops.getOrDefault(id, 0) : 0; }
+
     /** From the packet-listener mixin, on the main thread, for every entity event. */
     public void onEntityEvent(ClientboundEntityEventPacket packet) {
         Minecraft mc = Minecraft.getInstance();

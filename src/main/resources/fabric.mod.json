@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "id": "alonebydeathclient",
+  "id": "donutwaffen",
   "version": "${version}",
-  "name": "AloneByDeath Client",
+  "name": "DonutWaffen",
   "description": "Utility client for anarchy and PvP: rounded Kami/Lambda style click GUI, crystal/spear/mace/1.8 combat, movement, render and player modules, custom main menu, HUD editor, saved configs. Adapts GPL-3.0 code from Wurst, Meteor and LiquidBounce.",
   "license": "GPL-3.0-only",
   "contact": { "homepage": "https://open.spotify.com/artist/0MVEjD74djJKq2ZJcNniE7" },
   "environment": "client",
   "entrypoints": { "client": ["dev.utilclient.UtilClient"] },
-  "mixins": ["alonebydeathclient.mixins.json"],
+  "mixins": ["donutwaffen.mixins.json"],
   "depends": {
     "fabricloader": ">=0.19.5",
     "minecraft": "~26.3",

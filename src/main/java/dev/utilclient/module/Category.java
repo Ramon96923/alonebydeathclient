@@ -6,6 +6,7 @@ public enum Category {
     RENDER("Render"),
     PLAYER("Player"),
     MISC("Misc"),
+    DONUT("Donut"),
     CLIENT("Client");
 
     public final String label;

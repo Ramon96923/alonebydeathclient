@@ -5,6 +5,7 @@ package dev.utilclient.mixin;
 
 import dev.utilclient.module.ModuleManager;
 import net.minecraft.client.Camera;
+import com.llamalad7.mixinextras.sugar.Local;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -20,10 +21,10 @@ public abstract class CameraFreecamMixin {
     private boolean detached;
 
     @ModifyArgs(method = "alignWithEntity", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;setPosition(DDD)V"))
-    private void abd$freecamPos(Args args) {
+    private void abd$freecamPos(Args args, @Local(argsOnly = true) float partialTicks) {
         var fc = ModuleManager.FREECAM;
         if (!fc.active()) return;
-        float pt = fc.partial();
+        float pt = partialTicks;   // the frame's real partial tick: smooth at any FPS
         args.set(0, fc.camX(pt));
         args.set(1, fc.camY(pt));
         args.set(2, fc.camZ(pt));

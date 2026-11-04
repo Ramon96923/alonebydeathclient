@@ -20,6 +20,16 @@ public abstract class HudMixin {
         if (ModuleManager.NO_RENDER.noPortal()) ci.cancel();
     }
 
+    @Inject(method = "extractScoreboardSidebar", at = @At("HEAD"), cancellable = true)
+    private void abd$scoreboard(CallbackInfo ci) {
+        if (ModuleManager.STREAMER_MODE.hideScoreboard()) ci.cancel();
+    }
+
+    @Inject(method = "extractCrosshair", at = @At("HEAD"), cancellable = true)
+    private void abd$crosshair(CallbackInfo ci) {
+        if (ModuleManager.CROSSHAIR.isEnabled()) ci.cancel();   // the custom one is drawn instead
+    }
+
     @Inject(method = "extractEffects", at = @At("HEAD"), cancellable = true)
     private void abd$effects(CallbackInfo ci) {
         if (ModuleManager.NO_RENDER.noPotionIcons()) ci.cancel();

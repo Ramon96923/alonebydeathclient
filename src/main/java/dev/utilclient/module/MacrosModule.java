@@ -32,7 +32,7 @@ public final class MacrosModule extends Module {
     private int wait;
 
     public MacrosModule() {
-        super("Macros", "Bind chat commands to keys (.macro)", Category.MISC);
+        super("Macros", "Bind chat commands to keys (.macro)", Category.DONUT);
         enabledByDefault = true;
     }
 

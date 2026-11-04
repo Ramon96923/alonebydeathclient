@@ -25,7 +25,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class UtilClient implements ClientModInitializer {
-    public static final String MOD_ID = "alonebydeathclient";
+    public static final String MOD_ID = "donutwaffen";
     private static final Logger LOG = Logger.getLogger(MOD_ID);
 
     private static KeyMapping openGui;
@@ -37,7 +37,7 @@ public class UtilClient implements ClientModInitializer {
         mainThread = Thread.currentThread();
         KeyMapping.Category category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "main"));
         openGui = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.alonebydeathclient.gui", InputConstants.Type.KEYBOARD, InputConstants.KEY_RSHIFT, category));
+                "key.donutwaffen.gui", InputConstants.Type.KEYBOARD, InputConstants.KEY_RSHIFT, category));
 
         try {
             Config.load();   // also initialises every module
@@ -69,6 +69,14 @@ public class UtilClient implements ClientModInitializer {
         });
 
         ClientSendMessageEvents.ALLOW_CHAT.register(message -> !Commands.handle(message));
+        net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
+            if (overlay) return;
+            try {
+                ModuleManager.TPA_ACCEPT.onMessage(message.getString());
+            } catch (Throwable ignored) {
+                // never break chat
+            }
+        });
         ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> Config.save());
 
         // Title-screen card: client name/version, an Open Click GUI button and a Spotify link.
@@ -83,14 +91,14 @@ public class UtilClient implements ClientModInitializer {
 
     public static void openGuiNextTick() { openGuiNextTick = true; }
 
-    /** Mod version from fabric.mod.json, e.g. "2.1.0". */
+    /** Mod version from fabric.mod.json, e.g. "3.0.0". */
     public static String version() {
         try {
             return FabricLoader.getInstance().getModContainer(MOD_ID)
                     .map(c -> c.getMetadata().getVersion().getFriendlyString())
-                    .orElse("2.1.0");
+                    .orElse("3.0.0");
         } catch (Throwable t) {
-            return "2.1.0";
+            return "3.0.0";
         }
     }
 

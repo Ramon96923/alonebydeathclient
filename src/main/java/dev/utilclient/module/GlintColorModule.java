@@ -23,7 +23,7 @@ public final class GlintColorModule extends Module {
         String path = id.getPath();
         if (!path.contains("enchanted_glint")) return null;
         if (!armor.get() && path.contains("armor")) return null;
-        return Identifier.fromNamespaceAndPath("alonebydeathclient",
+        return Identifier.fromNamespaceAndPath("donutwaffen",
                 "textures/glint/" + color.get().toLowerCase(Locale.ROOT) + ".png");
     }
 }

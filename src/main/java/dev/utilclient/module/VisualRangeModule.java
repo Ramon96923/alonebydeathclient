@@ -15,6 +15,7 @@ public final class VisualRangeModule extends Module {
     private final BoolSetting onEnter = bool("On enter", true);
     private final BoolSetting onLeave = bool("On leave", false);
     private final BoolSetting ignoreFriends = bool("Ignore friends", true);
+    private final BoolSetting sound = bool("Sound", true).desc("Chime when someone appears");
 
     private final Set<UUID> seen = new HashSet<>();
 
@@ -33,6 +34,7 @@ public final class VisualRangeModule extends Module {
             now.add(id);
             if (onEnter.get() && seen.add(id)) {
                 Chat.info("§a+ §f" + pl.getName().getString() + " §7entered your range");
+                if (sound.get()) Chat.ping();
             }
         }
         if (onLeave.get()) {

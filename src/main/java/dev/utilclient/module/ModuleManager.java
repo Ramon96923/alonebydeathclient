@@ -13,7 +13,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public final class ModuleManager {
-    private static final Logger LOG = Logger.getLogger("alonebydeathclient");
+    private static final Logger LOG = Logger.getLogger("donutwaffen");
 
     // client
     public static final ClickGuiModule CLICK_GUI = new ClickGuiModule();
@@ -42,6 +42,14 @@ public final class ModuleManager {
     public static final ShieldBreakerModule SHIELD_BREAKER = new ShieldBreakerModule();
     public static final AutoPotModule AUTO_POT = new AutoPotModule();
     public static final AntiBotModule ANTI_BOT = new AntiBotModule();
+    public static final KeyPearlModule KEY_PEARL = new KeyPearlModule();
+    public static final KeyWindChargeModule KEY_WIND_CHARGE = new KeyWindChargeModule();
+    public static final AutoDoubleHandModule AUTO_DOUBLE_HAND = new AutoDoubleHandModule();
+    public static final InvTotemModule INV_TOTEM = new InvTotemModule();
+    public static final CrystalMacroModule CRYSTAL_MACRO = new CrystalMacroModule();
+    public static final AnchorMacroModule ANCHOR_MACRO = new AnchorMacroModule();
+    public static final JumpResetModule JUMP_RESET = new JumpResetModule();
+    public static final WTapModule W_TAP = new WTapModule();
     // movement
     public static final SprintModule SPRINT = new SprintModule();
     public static final AutoWalkModule AUTO_WALK = new AutoWalkModule();
@@ -69,6 +77,9 @@ public final class ModuleManager {
     public static final FreecamModule FREECAM = new FreecamModule();
     public static final StorageEspModule STORAGE_ESP = new StorageEspModule();
     public static final GlintColorModule GLINT_COLOR = new GlintColorModule();
+    public static final TunnelEspModule TUNNEL_ESP = new TunnelEspModule();
+    public static final CrosshairModule CROSSHAIR = new CrosshairModule();
+    public static final TrajectoriesModule TRAJECTORIES = new TrajectoriesModule();
     // player
     public static final AutoMineModule AUTO_MINE = new AutoMineModule();
     public static final AutoPlaceModule AUTO_PLACE = new AutoPlaceModule();
@@ -78,6 +89,7 @@ public final class ModuleManager {
     public static final AutoRespawnModule AUTO_RESPAWN = new AutoRespawnModule();
     public static final AutoMendModule AUTO_MEND = new AutoMendModule();
     public static final ChestStealerModule CHEST_STEALER = new ChestStealerModule();
+    public static final ElytraSwapModule ELYTRA_SWAP = new ElytraSwapModule();
     // misc
     public static final FakePlayerModule FAKE_PLAYER = new FakePlayerModule();
     public static final MiddleClickFriendModule MIDDLE_CLICK_FRIEND = new MiddleClickFriendModule();
@@ -86,17 +98,24 @@ public final class ModuleManager {
     public static final VisualRangeModule VISUAL_RANGE = new VisualRangeModule();
     public static final PopCounterModule POP_COUNTER = new PopCounterModule();
     public static final MacrosModule MACROS = new MacrosModule();
+    // DonutSMP
+    public static final RtpBaseFinderModule RTP_BASE_FINDER = new RtpBaseFinderModule();
+    public static final AutoSellModule AUTO_SELL = new AutoSellModule();
+    public static final StreamerModeModule STREAMER_MODE = new StreamerModeModule();
+    public static final TpaAcceptModule TPA_ACCEPT = new TpaAcceptModule();
 
     public static final List<Module> ALL = List.of(
             CLICK_GUI, HUD, NOTIFICATIONS,
             AUTO_HIT, TRIGGERBOT, AUTO_CLICKER, AIMBOT, CRITICALS, HITBOX, OLD_PVP, MACE, SPEAR,
             AUTO_TOTEM, AUTO_CRYSTAL, AUTO_ANCHOR, SURROUND, AUTO_ARMOR, AUTO_WEAPON,
             AUTO_TRAP, SELF_TRAP, HOLE_FILLER, AUTO_LOG, SHIELD_BREAKER, AUTO_POT, ANTI_BOT,
+            KEY_PEARL, KEY_WIND_CHARGE, AUTO_DOUBLE_HAND, INV_TOTEM, CRYSTAL_MACRO, ANCHOR_MACRO, JUMP_RESET, W_TAP,
             SPRINT, AUTO_WALK, STEP, NO_FALL, VELOCITY, ELYTRA_FLY, FLIGHT, SPEED, JESUS, SCAFFOLD,
             ESP, NAMETAGS, TRACERS, BLOCK_ESP, HOLE_ESP, TRACKER, XRAY, FULLBRIGHT, ZOOM, NO_RENDER,
-            LOGOUT_SPOTS, BREADCRUMBS, FREECAM, STORAGE_ESP, GLINT_COLOR,
-            AUTO_MINE, AUTO_PLACE, AUTO_TOOL, AUTO_EAT, FAST_PLACE, AUTO_RESPAWN, AUTO_MEND, CHEST_STEALER,
-            FAKE_PLAYER, MIDDLE_CLICK_FRIEND, ANTI_AFK, AUTO_RECONNECT, VISUAL_RANGE, POP_COUNTER, MACROS);
+            LOGOUT_SPOTS, BREADCRUMBS, FREECAM, STORAGE_ESP, GLINT_COLOR, TUNNEL_ESP, CROSSHAIR, TRAJECTORIES,
+            AUTO_MINE, AUTO_PLACE, AUTO_TOOL, AUTO_EAT, FAST_PLACE, AUTO_RESPAWN, AUTO_MEND, CHEST_STEALER, ELYTRA_SWAP,
+            FAKE_PLAYER, MIDDLE_CLICK_FRIEND, ANTI_AFK, AUTO_RECONNECT, VISUAL_RANGE, POP_COUNTER, MACROS,
+            RTP_BASE_FINDER, AUTO_SELL, STREAMER_MODE, TPA_ACCEPT);
 
     static {
         for (Module m : ALL) m.addMeta();

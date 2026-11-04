@@ -15,11 +15,22 @@ public abstract class MouseHandlerMixin {
     private void abd$button(long handle, MouseButtonInfo info, int action, CallbackInfo ci) {
         if (action != InputConstants.PRESS) return;
         try {
+            dev.utilclient.module.HudModule.onClick(info.button());   // keystrokes CPS
             // title-screen card buttons (left click); swallow the click so vanilla doesn't also handle it
             if (info.button() == 0 && dev.utilclient.gui.MainMenu.onMousePress()) { ci.cancel(); return; }
             if (info.button() == InputConstants.MOUSE_BUTTON_MIDDLE && ModuleManager.MIDDLE_CLICK_FRIEND.isEnabled()) {
                 ModuleManager.MIDDLE_CLICK_FRIEND.onMiddleClick();
             }
+        } catch (Throwable ignored) {
+            // never break vanilla input
+        }
+    }
+
+    /** Freecam: the mouse wheel changes camera speed instead of your hotbar slot. */
+    @Inject(method = "onScroll", at = @At("HEAD"), cancellable = true)
+    private void abd$scroll(long handle, double xoffset, double yoffset, CallbackInfo ci) {
+        try {
+            if (ModuleManager.FREECAM.scroll(yoffset)) ci.cancel();
         } catch (Throwable ignored) {
             // never break vanilla input
         }

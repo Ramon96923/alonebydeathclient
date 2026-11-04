@@ -30,6 +30,7 @@ public final class NametagsModule extends Module {
     private final BoolSetting health = bool("Health", true);
     private final BoolSetting distance = bool("Distance", true);
     private final BoolSetting ping = bool("Ping", true);
+    private final BoolSetting pops = bool("Totem pops", true).desc("How many totems they've popped (needs PopCounter)");
     private final BoolSetting gear = bool("Gear", true).desc("Held items and armour above the tag");
     private final NumberSetting scale = num("Scale", 1.0, 0.5, 2.0, 0.1);
     private final BoolSetting background = bool("Background", true);
@@ -80,6 +81,10 @@ public final class NametagsModule extends Module {
         if (ping.get() && e instanceof Player pl && mc.getConnection() != null) {
             PlayerInfo info = mc.getConnection().getPlayerInfo(pl.getUUID());
             if (info != null) extra.append(' ').append(info.getLatency()).append("ms");
+        }
+        if (pops.get() && e instanceof Player pp) {
+            int n = ModuleManager.POP_COUNTER.pops(pp.getUUID());
+            if (n > 0) extra.append(" -").append(n);
         }
         if (distance.get()) extra.append(String.format(Locale.ROOT, " %.0fm", mc.player.distanceTo(e)));
         String hp = health.get() ? String.format(Locale.ROOT, " %.1f", e.getHealth() + e.getAbsorptionAmount()) : "";

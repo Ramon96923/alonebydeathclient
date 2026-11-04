@@ -32,4 +32,14 @@ public final class Chat {
             if (mc.gui != null) mc.gui.hud.getChat().addClientSystemMessage(msg);
         });
     }
+
+    /** A short chime for alerts (base found, player nearby...). */
+    public static void ping() {
+        try {
+            var p = net.minecraft.client.Minecraft.getInstance().player;
+            if (p != null) p.playSound(net.minecraft.sounds.SoundEvents.NOTE_BLOCK_CHIME.value(), 1f, 1.5f);
+        } catch (Throwable ignored) {
+            // sound is optional
+        }
+    }
 }

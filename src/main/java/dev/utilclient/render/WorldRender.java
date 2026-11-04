@@ -2,7 +2,7 @@
  * Rendering pipeline setup, buffer handling and line drawing adapted from
  * Wurst Client (https://github.com/Wurst-Imperium/Wurst7),
  * Copyright (c) 2014-2026 Wurst-Imperium and contributors, GPL-3.0.
- * Modified for AloneByDeath Client, which is also distributed under GPL-3.0.
+ * Modified for DonutWaffen, which is also distributed under GPL-3.0.
  */
 package dev.utilclient.render;
 
@@ -42,13 +42,13 @@ import java.util.logging.Logger;
  * modules fall back to their 2D screen-space drawing.
  */
 public final class WorldRender {
-    private static final Logger LOG = Logger.getLogger("alonebydeathclient");
+    private static final Logger LOG = Logger.getLogger("donutwaffen");
     private static volatile long lastFrame;
     private static volatile boolean broken;
 
     private WorldRender() {}
 
-    private static Identifier id(String path) { return Identifier.fromNamespaceAndPath("alonebydeathclient", path); }
+    private static Identifier id(String path) { return Identifier.fromNamespaceAndPath("donutwaffen", path); }
 
     /** Pipelines are created lazily the first time the world renders. */
     private static final class Layers {
@@ -72,18 +72,18 @@ public final class WorldRender {
                 .withCull(false)
                 .build());
 
-        static final RenderType LINES = RenderType.create("alonebydeathclient:esp_lines",
+        static final RenderType LINES = RenderType.create("donutwaffen:esp_lines",
                 RenderSetup.builder(ESP_LINES_PIPELINE)
                         .setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
                         .createRenderSetup());
 
-        static final RenderType QUADS = RenderType.create("alonebydeathclient:esp_quads",
+        static final RenderType QUADS = RenderType.create("donutwaffen:esp_quads",
                 RenderSetup.builder(ESP_QUADS_PIPELINE).sortOnUpload().createRenderSetup());
     }
 
     /** Collects geometry and draws it in one render pass (Wurst's buffer source). */
     private static final class Batch {
-        private final StagedVertexBuffer stagedBuffer = new StagedVertexBuffer(() -> "AloneByDeathBatch", RenderType.BIG_BUFFER_SIZE);
+        private final StagedVertexBuffer stagedBuffer = new StagedVertexBuffer(() -> "DonutWaffenBatch", RenderType.BIG_BUFFER_SIZE);
         private final List<StagedVertexBuffer.Draw> draws = new ArrayList<>();
         private final List<RenderType> drawTypes = new ArrayList<>();
 
@@ -104,7 +104,7 @@ public final class WorldRender {
                 stagedBuffer.upload();
                 RenderTarget target = Minecraft.getInstance().gameRenderer.mainRenderTarget();
                 try (RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
-                        () -> "AloneByDeathBatch", target.getColorTextureView(), Optional.empty(),
+                        () -> "DonutWaffenBatch", target.getColorTextureView(), Optional.empty(),
                         target.getDepthTextureView(), OptionalDouble.empty())) {
                     RenderSystem.bindDefaultUniforms(pass);
                     for (int i = 0; i < draws.size(); i++) {

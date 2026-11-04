@@ -111,7 +111,7 @@ public class ClickGui extends Screen {
 
     /** @param parent screen to return to (e.g. the title screen); null to close into the game */
     public ClickGui(Screen parent) {
-        super(Component.literal("AloneByDeath"));
+        super(Component.literal("DonutWaffen"));
         this.parent = parent;
     }
 
@@ -319,6 +319,12 @@ public class ClickGui extends Screen {
         String title = p.cat.label;
         String count = p.cat == Category.CLIENT ? "" : enabled + "/" + mods.size();
         boolean folded = p.openAnim <= 0.001f || p.contentH <= 0;
+        if (theme().shadow.get() && p.by1 > p.by0) {   // soft shadow, sized from last frame's panel
+            int bottom = Math.max(y + HEADER_H, p.by1 + (y - p.by0));
+            for (int i = 1; i <= 4; i++) {
+                Draw.round(g, x - i, y - i + 2, x + pw + i, bottom + i + 2, r() + i, Draw.alpha(0x000000, 22 - i * 4));
+            }
+        }
         switch (theme().headerStyle.get()) {
             case "Filled" -> {
                 Draw.round(g, x, y, x + pw, y + HEADER_H, r(), acc, true, folded);
@@ -494,6 +500,17 @@ public class ClickGui extends Screen {
                 Fonts.text(g, Fonts.fit(s.name, iw - Fonts.width(v) - 6), ix, y + 2, TEXT);
                 Fonts.text(g, v, x + pw - 6 - Fonts.width(v), y + 2, acc);
                 if (inClip(y, y + h)) hits.add(new Hit(x, y, x + pw, y + ROW_H, Type.SETTING, s, null));
+            } else if (s instanceof dev.utilclient.module.StringSetting str) {
+                boolean editing = editingText == str;
+                String v = editing ? textBuffer + (((System.currentTimeMillis() / 450L) & 1) == 0 ? "_" : " ") : str.valueText();
+                int nameW = Math.min(Fonts.width(s.name), iw / 2);
+                Fonts.text(g, Fonts.fit(s.name, nameW), ix, y + 2, TEXT);
+                int vx0 = ix + nameW + 6, vx1 = x + pw - 5;
+                if (editing) Draw.round(g, vx0 - 2, y + 1, vx1 + 1, y + ROW_H - 1, 3, Draw.alpha(0x000000, 120));
+                String shown = v;
+                while (shown.length() > 1 && Fonts.width(shown) > vx1 - vx0 - 2) shown = shown.substring(1);   // keep the end visible
+                Fonts.text(g, shown, vx1 - Fonts.width(shown), y + 2, editing ? acc : DIM);
+                if (inClip(y, y + h)) hits.add(new Hit(x, y, x + pw, y + ROW_H, Type.SETTING, s, null));
             } else if (s instanceof ColorSetting c) {
                 Fonts.text(g, Fonts.fit(s.name, iw - 24), ix, y + 2, TEXT);
                 int sx = x + pw - 18;
@@ -667,6 +684,7 @@ public class ClickGui extends Screen {
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         double mx = event.x() / s, my = event.y() / s;
         int button = event.button();
+        commitText();   // clicking anywhere saves a text setting being typed
         boolean left = button == InputConstants.MOUSE_BUTTON_LEFT;
         boolean right = button == InputConstants.MOUSE_BUTTON_RIGHT;
         boolean middle = button == InputConstants.MOUSE_BUTTON_MIDDLE;
@@ -727,6 +745,9 @@ public class ClickGui extends Screen {
                     }
                 } else if (s instanceof ModeSetting || s instanceof BoolSetting) {
                     if (left || right) s.click(left);
+                } else if (s instanceof dev.utilclient.module.StringSetting str) {
+                    if (left) { commitText(); editingText = str; textBuffer = str.get(); }
+                    else if (right) str.reset();
                 }
             }
             case SLIDER -> { /* handled via SETTING */ }
@@ -803,6 +824,21 @@ public class ClickGui extends Screen {
     @Override
     public boolean keyPressed(KeyEvent event) {
         int key = event.key();
+        if (editingText != null) {
+            if (key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER) { commitText(); return true; }
+            if (key == InputConstants.KEY_ESCAPE) { editingText = null; return true; }
+            if (key == InputConstants.KEY_BACKSPACE) {
+                if (!textBuffer.isEmpty()) textBuffer = textBuffer.substring(0, textBuffer.length() - 1);
+                return true;
+            }
+            char c = anyChar(key);
+            if (c != 0 && textBuffer.length() < 128) {
+                textBuffer += c;
+                lastTyped = Character.toLowerCase(c);
+                lastTypedAt = System.currentTimeMillis();
+            }
+            return true;
+        }
         if (listening != null) {
             if (key == InputConstants.KEY_ESCAPE || key == InputConstants.KEY_BACKSPACE || key == InputConstants.KEY_DELETE) {
                 listening.key = -1;
@@ -844,6 +880,15 @@ public class ClickGui extends Screen {
         if (listening != null) return true;
         int cp = event.codepoint();
         if (cp < 32 || Character.isISOControl(cp)) return true;
+        if (editingText != null) {
+            // keyPressed already typed this key (lowercase); when SDL sends the real character, prefer it
+            if (Character.toLowerCase(cp) == lastTyped && System.currentTimeMillis() - lastTypedAt < 250 && !textBuffer.isEmpty()) {
+                textBuffer = textBuffer.substring(0, textBuffer.length() - 1);
+            }
+            if (textBuffer.length() < 128) textBuffer += new String(Character.toChars(cp));
+            lastTypedAt = 0;
+            return true;
+        }
         // the same key was already handled in keyPressed: don't type it twice
         if (Character.toLowerCase(cp) == lastTyped && System.currentTimeMillis() - lastTypedAt < 250) return true;
         String str = new String(Character.toChars(cp));
@@ -853,6 +898,21 @@ public class ClickGui extends Screen {
 
     private char lastTyped;
     private long lastTypedAt;
+    private dev.utilclient.module.StringSetting editingText;
+    private String textBuffer = "";
+
+    private void commitText() {
+        if (editingText != null) editingText.set(textBuffer);
+        editingText = null;
+    }
+
+    /** Any single printable character for a key (letters, digits, / - . etc), from its display name. */
+    private static char anyChar(int key) {
+        if (key == InputConstants.KEY_SPACE) return ' ';
+        String n = Keys.name(key);
+        if (n != null && n.length() == 1 && n.charAt(0) > 32) return Character.toLowerCase(n.charAt(0));
+        return 0;
+    }
 
     private void addSearch(char c) {
         if (search.length() >= 24) return;
@@ -873,6 +933,7 @@ public class ClickGui extends Screen {
 
     @Override
     public void onClose() {
+        commitText();
         ModuleManager.HUD.editing = false;
         Config.save();
         if (parent != null) minecraft.gui.setScreen(parent);

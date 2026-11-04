@@ -19,7 +19,8 @@ import java.util.function.Predicate;
 
 /** Boxes (and optional tracers) around ores and storage through walls. Scans a little each tick to avoid lag. */
 public final class BlockEspModule extends Module {
-    private record Kind(String name, Predicate<String> test, ColorSetting color, BoolSetting on) {}
+    private record Kind(String name, Predicate<String> test, ColorSetting color, BoolSetting on,
+                        Predicate<net.minecraft.world.level.block.state.BlockState> state) {}
     private record Found(BlockPos pos, int argb) {}
 
     private final List<Kind> kinds = new ArrayList<>();
@@ -39,10 +40,15 @@ public final class BlockEspModule extends Module {
     private BlockPos scanCenter;
 
     private void kind(String name, Predicate<String> idTest, int argb, boolean def) {
+        kind(name, idTest, argb, def, null);
+    }
+
+    /** @param state extra check on the block state (e.g. "deepslate that isn't upright"), or null */
+    private void kind(String name, Predicate<String> idTest, int argb, boolean def,
+                      Predicate<net.minecraft.world.level.block.state.BlockState> state) {
         BoolSetting on = bool(name, def, this::rebuild);
         ColorSetting col = color(name + " colour", argb).visible(on::get);
-        Kind k = new Kind(name, idTest, col, on);
-        kinds.add(k);
+        kinds.add(new Kind(name, idTest, col, on, state));
     }
 
     public BlockEspModule() {
@@ -58,6 +64,14 @@ public final class BlockEspModule extends Module {
         kind("Spawners", id -> id.equals("spawner") || id.equals("trial_spawner"), 0xFFEF4444, true);
         kind("Furnaces", id -> id.equals("furnace") || id.equals("blast_furnace") || id.equals("smoker"), 0xFF9CA3AF, false);
         kind("Hoppers", id -> id.equals("hopper") || id.equals("dropper") || id.equals("dispenser"), 0xFF64748B, false);
+        // base-finding hints (DonutSMP): natural deepslate is always upright, so a sideways one was placed
+        kind("Rotated deepslate", id -> id.equals("deepslate"), 0xFF7DD3FC, false,
+                st -> st.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.AXIS)
+                        && st.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.AXIS)
+                        != net.minecraft.core.Direction.Axis.Y);
+        kind("Pistons", id -> id.equals("piston") || id.equals("sticky_piston") || id.equals("observer"), 0xFFA3E635, false);
+        kind("Beds", id -> id.endsWith("_bed"), 0xFFF87171, false);
+        kind("Geodes", id -> id.equals("budding_amethyst"), 0xFFC084FC, false);
     }
 
     private void rebuild() {
@@ -92,8 +106,9 @@ public final class BlockEspModule extends Module {
             int y = scanCenter.getY() + scanLayer;
             for (int x = -r; x <= r; x++) for (int z = -r; z <= r; z++) {
                 m.set(scanCenter.getX() + x, y, scanCenter.getZ() + z);
-                Kind k = lookup.get(level.getBlockState(m).getBlock());
-                if (k != null) building.add(new Found(m.immutable(), k.color.get()));
+                var st = level.getBlockState(m);
+                Kind k = lookup.get(st.getBlock());
+                if (k != null && (k.state == null || k.state.test(st))) building.add(new Found(m.immutable(), k.color.get()));
             }
         }
         if (scanLayer > vr) {

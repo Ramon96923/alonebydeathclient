@@ -61,6 +61,8 @@ public abstract class Module {
         return add(new ModeSetting(name, def, null, modes));
     }
 
+    protected StringSetting text(String name, String def) { return add(new StringSetting(name, def, null)); }
+
     protected ColorSetting color(String name, int argb) { return add(new ColorSetting(name, argb, null)); }
 
     public Setting setting(String name) {

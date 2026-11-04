@@ -29,6 +29,9 @@ public final class HudModule extends Module {
     private final ModeSetting colorMode = mode("Colours", "Theme", "Theme", "Rainbow", "White")
             .desc("Theme follows the ClickGUI accent");
     private final BoolSetting backgrounds = bool("Backgrounds", true);
+    private final NumberSetting bgOpacity = num("Background opacity", 140, 20, 255, 5).visible(backgrounds::get);
+    private final BoolSetting rounded = bool("Rounded", true).desc("Rounded corners on HUD boxes");
+    private final BoolSetting watermarkInfo = bool("Watermark info", true).desc("FPS and ping next to the name");
     private final BoolSetting lowercase = bool("Lowercase", false);
     private final BoolSetting listInfo = bool("List mode info", true).desc("Show a module's mode next to its name");
     private final ModeSetting listSort = mode("List order", "Length", "Length", "Alphabetical");
@@ -52,6 +55,7 @@ public final class HudModule extends Module {
         elements.add(new Element("Totems", true, false, true, 0, 58, this::totems).centered().shift(78));
         elements.add(new Element("Target HUD", true, false, false, 0, 0, this::targetHud).centered().shift(14).mid());
         elements.add(new Element("Potions", false, true, true, 4, 40, this::potions));
+        elements.add(new Element("Keystrokes", false, false, true, 4, 60, this::keystrokes));
     }
 
     // ---- element model -------------------------------------------------------------------------
@@ -177,8 +181,20 @@ public final class HudModule extends Module {
         };
     }
 
-    private void bg(GuiGraphicsExtractor g, int x0, int y0, int x1, int y1) {
-        if (backgrounds.get()) g.fill(x0, y0, x1, y1, 0x90000000);
+    private void bg(GuiGraphicsExtractor g, int x0, int y0, int x1, int y1) { bg(g, x0, y0, x1, y1, 4); }
+
+    private void bg(GuiGraphicsExtractor g, int x0, int y0, int x1, int y1, int radius) {
+        if (!backgrounds.get()) return;
+        int c = Draw.alpha(0x0B0B10, bgOpacity.getInt());
+        if (rounded.get()) Draw.round(g, x0, y0, x1, y1, radius, c);
+        else g.fill(x0, y0, x1, y1, c);
+    }
+
+    private static int ping() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.getConnection() == null || mc.player == null) return -1;
+        var pi = mc.getConnection().getPlayerInfo(mc.player.getUUID());
+        return pi == null ? -1 : pi.getLatency();
     }
 
     private static int[] size(int w, int h) { return new int[] {w, h}; }
@@ -196,13 +212,26 @@ public final class HudModule extends Module {
     // ---- elements -------------------------------------------------------------------------------
 
     private int[] watermark(GuiGraphicsExtractor g, int x, int y, boolean right, boolean dry) {
-        String a = txt("AloneByDeath"), b = " 2.0";
-        int w = Fonts.width(a, true) + Fonts.width(b) + 8, h = 13;
+        String a = txt("DonutWaffen"), b = " " + dev.utilclient.UtilClient.version();
+        String extra = "";
+        if (watermarkInfo.get()) {
+            int pg = ping();
+            extra = "  |  " + RenderState.fps() + " fps" + (pg >= 0 ? "  |  " + pg + " ms" : "");
+        }
+        int w = Fonts.width(a, true) + Fonts.width(b) + Fonts.width(extra) + 12, h = 15;
         if (dry) return size(w, h);
-        bg(g, x, y, x + w, y + h);
-        g.fill(x, y, x + w, y + 1, color(0f));
-        Fonts.text(g, a, x + 4, y + 3, color(0f), true);
-        Fonts.text(g, b, x + 4 + Fonts.width(a, true), y + 3, 0xFFA0A0B0);
+        bg(g, x, y, x + w, y + h, 5);
+        // accent strip + the name in a per-letter gradient
+        Draw.round(g, x + 5, y + h - 2, x + w - 5, y + h - 1, 0, Draw.withAlpha(color(0f), 0.8f));
+        int cx = x + 6;
+        for (int i = 0; i < a.length(); i++) {
+            String ch = String.valueOf(a.charAt(i));
+            Fonts.text(g, ch, cx, y + 3, color(i * 0.05f), true);
+            cx += Fonts.width(ch, true);
+        }
+        Fonts.text(g, b, cx, y + 3, 0xFFB0B0C0);
+        cx += Fonts.width(b);
+        if (!extra.isEmpty()) Fonts.text(g, extra, cx, y + 3, 0xFF8A8A9A);
         return size(w, h);
     }
 
@@ -249,7 +278,7 @@ public final class HudModule extends Module {
             int slide = (int) ((1f - e) * (w + 4));
             int rx = alignRight ? x + maxW - w + slide : x - slide;
             int col = color(i * 0.06f);
-            bg(g, rx, cy, rx + w, cy + rowH);
+            bg(g, rx, cy, rx + w, cy + rowH, 2);
             if (alignRight) g.fill(rx + w - 1, cy, rx + w, cy + rowH, col);
             else g.fill(rx, cy, rx + 1, cy + rowH, col);
             Fonts.text(g, name, rx + 4, cy + 1, col);
@@ -264,6 +293,7 @@ public final class HudModule extends Module {
 
     private int[] coords(GuiGraphicsExtractor g, int x, int y, boolean right, boolean dry) {
         Minecraft mc = Minecraft.getInstance();
+        if (ModuleManager.STREAMER_MODE.hideCoords() && !editing) return size(0, 0);
         LocalPlayer p = mc.player;
         boolean nether = mc.level.dimension() == Level.NETHER;
         double scale = nether ? 8.0 : 0.125;
@@ -410,6 +440,48 @@ public final class HudModule extends Module {
         for (int i = 0; i < lines.size(); i++) {
             Fonts.text(g, lines.get(i), right ? x + w - 4 - Fonts.width(lines.get(i)) : x + 4, y + 2 + i * 10, 0xFFE0E0EA);
         }
+        return size(w, h);
+    }
+
+    // ---- keystrokes -----------------------------------------------------------------------------
+
+    private static final java.util.ArrayDeque<Long> LEFT = new java.util.ArrayDeque<>(), RIGHT = new java.util.ArrayDeque<>();
+
+    /** From MouseHandlerMixin on every mouse press: feeds the CPS counters. */
+    public static void onClick(int button) {
+        long now = System.currentTimeMillis();
+        if (button == 0) LEFT.addLast(now);
+        else if (button == 1) RIGHT.addLast(now);
+    }
+
+    private static int cps(java.util.ArrayDeque<Long> q) {
+        long cutoff = System.currentTimeMillis() - 1000;
+        while (!q.isEmpty() && q.peekFirst() < cutoff) q.pollFirst();
+        return q.size();
+    }
+
+    private void key(GuiGraphicsExtractor g, int x, int y, int w, int h, String label, boolean down) {
+        float t = 0f;
+        if (down) t = 1f;
+        int fill = down ? Draw.withAlpha(color(0f), 0.85f) : Draw.alpha(0x0B0B10, bgOpacity.getInt());
+        if (rounded.get()) Draw.round(g, x, y, x + w, y + h, 3, fill);
+        else g.fill(x, y, x + w, y + h, fill);
+        Fonts.centered(g, label, x + w / 2, y + h / 2 - 4, down ? 0xFF101014 : 0xFFE6E6EE, t > 0.5f);
+    }
+
+    private int[] keystrokes(GuiGraphicsExtractor g, int x, int y, boolean right, boolean dry) {
+        int k = 18, gap = 2, w = k * 3 + gap * 2, h = k * 3 + gap * 2 + 10;
+        if (dry) return size(w, h);
+        Minecraft mc = Minecraft.getInstance();
+        var o = mc.options;
+        key(g, x + k + gap, y, k, k, "W", o.keyUp.isDown());
+        key(g, x, y + k + gap, k, k, "A", o.keyLeft.isDown());
+        key(g, x + k + gap, y + k + gap, k, k, "S", o.keyDown.isDown());
+        key(g, x + (k + gap) * 2, y + k + gap, k, k, "D", o.keyRight.isDown());
+        int half = (w - gap) / 2;
+        key(g, x, y + (k + gap) * 2, half, k, cps(LEFT) + " CPS", o.keyAttack.isDown());
+        key(g, x + half + gap, y + (k + gap) * 2, half, k, cps(RIGHT) + " CPS", o.keyUse.isDown());
+        key(g, x, y + (k + gap) * 3, w, 8, "", o.keyJump.isDown());
         return size(w, h);
     }
 }

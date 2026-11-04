@@ -1,7 +1,9 @@
-# AloneByDeath Client 2.1 (Fabric, Minecraft 26.3)
+# DonutWaffen 3.0 (Fabric, Minecraft 26.3)
+
+A utility client built for DonutSMP and anarchy servers (formerly AloneByDeath Client). Your old settings are copied over automatically on first launch.
 
 ## Main menu
-When you're on the title screen there's an **AloneByDeath** card in the top-left:
+When you're on the title screen there's a **DonutWaffen** card in the top-left:
 - **Open Click GUI** opens the full menu right there, before you even join a world (it also shows the key it's bound to).
 - **AloneByDeath on Spotify** opens [the artist page](https://open.spotify.com/artist/0MVEjD74djJKq2ZJcNniE7) in your browser.
 
@@ -20,6 +22,20 @@ Turn the card off under Client > ClickGUI > *Main menu card*.
 - **HUD Editor** (top right) lets you drag HUD elements and switch them on or off.
 - Theme settings are under Client > ClickGUI: accent colour, gradient or rainbow, header style (Kami or Lambda), **GUI scale** (the menu is smaller by default now) and **corner radius** (rounded panels, switches and buttons), panel width, opacity, background dim or blur, custom font, text shadow, animation speed, and more.
 
+## DonutSMP (the Donut panel)
+- **RTPBaseFinder** – keeps doing `/rtp east` (editable), scans every landing for storage, spawners and players, and stops with a chime and the coordinates when it finds a base. Can log you out on a find.
+- **AutoSell** – opens `/sell` when your inventory is full (or on a timer), moves your loot in and closes it, keeping your gear, hotbar and shulkers.
+- **TpaAccept** – accepts teleport requests from friends (or anyone) and presses the confirm button.
+- **StreamerMode** – hides the sidebar scoreboard and your HUD coordinates.
+- **Macros** – see below. `.coords` copies your coordinates.
+- Base finding also lives in Render: **StorageESP** now marks **spawners** (with an alert), **TunnelESP** finds player-dug 1x2 tunnels, and **BlockESP** can show **rotated deepslate** (always player-placed), pistons, beds and geodes.
+- PvP: **CrystalMacro**, **AnchorMacro**, **KeyPearl**, **KeyWindCharge**, **ElytraSwap**, **InvTotem** (legit offhand refill), **AutoDoubleHand**, **JumpReset**, **WTap**.
+
+Ideas come from the feature lists of DonutSMP clients like Glazed (a Meteor addon), Krypton and 67 Client. Glazed is all-rights-reserved and the others are closed source, so none of their code is used.
+
+## Text settings
+Some settings are text (like RTPBaseFinder's *Command*). Click one, type, then press Enter (Esc cancels). Or use `.set rtpbasefinder command /rtp west`.
+
 ## Macros (great for DonutSMP)
 - `.macro add /home` then press a key: that key now runs `/home`. Plain text works too (it's sent as chat).
 - Chain commands with `&&`, e.g. `.macro add /sell && /ah` (sent a moment apart).
@@ -28,7 +44,9 @@ Turn the card off under Client > ClickGUI > *Main menu card*.
 
 ## Base finding & visuals
 - **StorageESP** outlines every chest, barrel, shulker and ender chest in your render distance, and its *Stash finder* tells you in chat when a chunk holds lots of storage.
-- **Freecam** flies the camera through walls while your body stays put (WASD, Space/Shift, mouse).
+- **Freecam** flies the camera through walls while your body stays put: it flies where you look, eases in and out, goes faster with your sprint key, and the mouse wheel changes speed.
+- **Trajectories** shows where pearls, potions, wind charges, tridents, bows and crossbows will land. **Crosshair** is a custom crosshair with a dynamic gap and cooldown bar.
+- **Themes**: ClickGUI > *Theme* has presets (Donut, Waffle, Midnight, Ocean, Sakura, Mint, Crimson, Mono). Panels have soft shadows; the HUD has rounded boxes, adjustable opacity, a gradient watermark with FPS/ping and a **Keystrokes** element with CPS.
 - **GlintColor** recolours enchantment glint (11 colours including rainbow).
 - **Fonts**: ClickGUI > *Font* picks Inter (default), Poppins, Manrope, JetBrains Mono or Outfit.
 
@@ -36,7 +54,7 @@ Turn the card off under Client > ClickGUI > *Main menu card*.
 AutoHit now defaults to **Smooth** rotations (your view turns naturally and it only swings once you're facing the target), a 3.1 block reach, no hitting through walls and a small random miss chance. Velocity defaults to taking 85% knockback instead of none, **AntiBot** (on by default) skips the invisible bots anticheats use to catch kill auras, and Criticals' default never sends fake packets. Blatant modules (Flight, Speed, packet modes) can still be caught on strict servers.
 
 ## Saving
-Everything saves automatically to `.minecraft/config/alonebydeathclient/config.json`: module toggles, settings, binds, panel and HUD positions, friends and the command prefix.
+Everything saves automatically to `.minecraft/config/donutwaffen/config.json`: module toggles, settings, binds, panel and HUD positions, friends and the command prefix.
 
 ## Commands (prefix `.`)
 | Command | What it does |

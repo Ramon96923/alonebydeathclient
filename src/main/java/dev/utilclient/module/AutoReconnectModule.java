@@ -20,7 +20,7 @@ import java.util.logging.Logger;
  * call follows Wurst's LastServerRememberer and Meteor's AutoReconnect (both GPL-3.0); the code is original.
  */
 public final class AutoReconnectModule extends Module {
-    private static final Logger LOG = Logger.getLogger("alonebydeathclient");
+    private static final Logger LOG = Logger.getLogger("donutwaffen");
 
     private final NumberSetting delay = num("Delay", 3.0, 0.0, 30.0, 0.5).unit("s").desc("Wait before auto-reconnecting");
 

@@ -3,7 +3,6 @@ package dev.utilclient.module;
 import dev.utilclient.util.Inv;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 
@@ -23,7 +22,6 @@ final class ThrowAction {
         float pitch = p.getXRot();
         if (down) {
             p.setXRot(90f);
-            p.connection.send(new ServerboundMovePlayerPacket.Rot(p.getYRot(), 90f, p.onGround(), p.horizontalCollision));
         }
         InteractionHand hand = offhand ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
         mc.gameMode.useItem(p, hand);

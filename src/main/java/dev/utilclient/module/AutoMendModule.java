@@ -3,7 +3,6 @@ package dev.utilclient.module;
 import dev.utilclient.util.Inv;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
@@ -50,7 +49,6 @@ public final class AutoMendModule extends Module {
         // camera back in the same tick so your view never moves. The bottle smashes at your feet.
         float pitch = p.getXRot();
         p.setXRot(90f);
-        p.connection.send(new ServerboundMovePlayerPacket.Rot(p.getYRot(), 90f, p.onGround(), p.horizontalCollision));
         mc.gameMode.useItem(p, InteractionHand.MAIN_HAND);
         p.setXRot(pitch);
         Inv.select(p, prev);

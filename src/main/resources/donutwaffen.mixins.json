@@ -21,6 +21,7 @@
     "LightmapMixin",
     "LivingEntityMixin",
     "LocalPlayerMixin",
+    "LocalPlayerRotationMixin",
     "MinecraftAccessor",
     "MinecraftMixin",
     "ModelBlockRendererMixin",

@@ -26,6 +26,12 @@ public final class AutoTotemModule extends Module {
     private final BoolSetting fallCheck = bool("Fall/elytra check", true).visible(() -> mode.is("Smart"));
     private final NumberSetting delay = num("Delay", 0, 0, 10, 1).unit("t");
     private final BoolSetting inInventory = bool("Work in inventory", true).desc("Also swap while your inventory is open");
+    private final ModeSetting method = mode("Method", "Legit", "Legit", "Blatant")
+            .desc("Legit: hotbar totems are swapped like pressing F, and inventory clicks only happen with your "
+                    + "inventory open (what anticheats expect). Blatant: clicks the inventory anytime (instant, easy to flag)");
+
+    // legit F-swap: 1 = slot selected, waiting a tick; 2 = swapped, switch back next tick
+    private int fStage, fPrev = -1;
 
     private int wait;
     private int lastCount;
@@ -39,6 +45,20 @@ public final class AutoTotemModule extends Module {
         LocalPlayer p = mc.player;
         lastCount = Inv.count(p, Items.TOTEM_OF_UNDYING);
         if (p.isSpectator() || p.isCreative()) return;
+        if (fStage == 1) {
+            p.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerActionPacket(
+                    net.minecraft.network.protocol.game.ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND,
+                    net.minecraft.core.BlockPos.ZERO, net.minecraft.core.Direction.DOWN, 0));
+            fStage = 2;
+            return;
+        }
+        if (fStage == 2) {
+            if (fPrev >= 0) Inv.select(p, fPrev);
+            fStage = 0;
+            fPrev = -1;
+            wait = delay.getInt() + 1;
+            return;
+        }
         if (wait > 0) { wait--; return; }
         if (!Inv.canClick(mc)) return;
         if (mc.gui.screen() != null && !inInventory.get()) return;
@@ -52,6 +72,17 @@ public final class AutoTotemModule extends Module {
             slot = find(p, Items.TOTEM_OF_UNDYING);
         }
         if (slot < 0) return;
+        if (method.is("Legit") && !(mc.gui.screen() instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen)) {
+            // inventory closed: only a hotbar item can be swapped, the way pressing F does it
+            int hb = Inv.hotbar(p, want);
+            if (hb < 0 && want != Items.TOTEM_OF_UNDYING) hb = Inv.hotbar(p, Items.TOTEM_OF_UNDYING);
+            if (hb < 0 && want == Items.GOLDEN_APPLE) hb = Inv.hotbar(p, Items.ENCHANTED_GOLDEN_APPLE);
+            if (hb < 0) return;
+            fPrev = Inv.selected(p);
+            Inv.select(p, hb);
+            fStage = 1;
+            return;
+        }
         Inv.swapWithOffhand(mc, slot);
         wait = delay.getInt();
     }

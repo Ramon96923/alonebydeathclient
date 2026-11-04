@@ -103,6 +103,8 @@ public final class ModuleManager {
     public static final AutoSellModule AUTO_SELL = new AutoSellModule();
     public static final StreamerModeModule STREAMER_MODE = new StreamerModeModule();
     public static final TpaAcceptModule TPA_ACCEPT = new TpaAcceptModule();
+    public static final AutoLeaveModule AUTO_LEAVE = new AutoLeaveModule();
+    public static final BaseFinderModule BASE_FINDER = new BaseFinderModule();
 
     public static final List<Module> ALL = List.of(
             CLICK_GUI, HUD, NOTIFICATIONS,
@@ -115,7 +117,7 @@ public final class ModuleManager {
             LOGOUT_SPOTS, BREADCRUMBS, FREECAM, STORAGE_ESP, GLINT_COLOR, TUNNEL_ESP, CROSSHAIR, TRAJECTORIES,
             AUTO_MINE, AUTO_PLACE, AUTO_TOOL, AUTO_EAT, FAST_PLACE, AUTO_RESPAWN, AUTO_MEND, CHEST_STEALER, ELYTRA_SWAP,
             FAKE_PLAYER, MIDDLE_CLICK_FRIEND, ANTI_AFK, AUTO_RECONNECT, VISUAL_RANGE, POP_COUNTER, MACROS,
-            RTP_BASE_FINDER, AUTO_SELL, STREAMER_MODE, TPA_ACCEPT);
+            RTP_BASE_FINDER, AUTO_SELL, STREAMER_MODE, TPA_ACCEPT, AUTO_LEAVE, BASE_FINDER);
 
     static {
         for (Module m : ALL) m.addMeta();

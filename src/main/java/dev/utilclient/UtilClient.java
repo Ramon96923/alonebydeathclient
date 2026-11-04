@@ -64,9 +64,11 @@ public class UtilClient implements ClientModInitializer {
                 mc.gui.setScreen(new ClickGui());
             }
             dev.utilclient.module.AutoReconnectModule.remember(mc.getCurrentServer());
-            ModuleManager.tick(mc);
             Config.tick();
         });
+        // Modules act at the START of the tick, like vanilla mouse/keyboard input: before your movement
+        // packet goes out. Acting after it is what anticheat "post" checks look for.
+        ClientTickEvents.START_CLIENT_TICK.register(ModuleManager::tick);
 
         ClientSendMessageEvents.ALLOW_CHAT.register(message -> !Commands.handle(message));
         net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
@@ -91,14 +93,14 @@ public class UtilClient implements ClientModInitializer {
 
     public static void openGuiNextTick() { openGuiNextTick = true; }
 
-    /** Mod version from fabric.mod.json, e.g. "3.0.0". */
+    /** Mod version from fabric.mod.json, e.g. "3.1.0". */
     public static String version() {
         try {
             return FabricLoader.getInstance().getModContainer(MOD_ID)
                     .map(c -> c.getMetadata().getVersion().getFriendlyString())
-                    .orElse("3.0.0");
+                    .orElse("3.1.0");
         } catch (Throwable t) {
-            return "3.0.0";
+            return "3.1.0";
         }
     }
 

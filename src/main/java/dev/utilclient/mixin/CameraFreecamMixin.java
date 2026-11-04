@@ -5,7 +5,7 @@ package dev.utilclient.mixin;
 
 import dev.utilclient.module.ModuleManager;
 import net.minecraft.client.Camera;
-import com.llamalad7.mixinextras.sugar.Local;
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -21,13 +21,13 @@ public abstract class CameraFreecamMixin {
     private boolean detached;
 
     @ModifyArgs(method = "alignWithEntity", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;setPosition(DDD)V"))
-    private void abd$freecamPos(Args args, @Local(argsOnly = true) float partialTicks) {
+    private void abd$freecamPos(Args args) {
         var fc = ModuleManager.FREECAM;
         if (!fc.active()) return;
-        float pt = partialTicks;   // the frame's real partial tick: smooth at any FPS
-        args.set(0, fc.camX(pt));
-        args.set(1, fc.camY(pt));
-        args.set(2, fc.camZ(pt));
+        fc.frame();   // advance by real frame time: smooth even when game ticks lag
+        args.set(0, fc.camX());
+        args.set(1, fc.camY());
+        args.set(2, fc.camZ());
     }
 
     @ModifyArgs(method = "alignWithEntity", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;setRotation(FF)V"))
@@ -41,5 +41,11 @@ public abstract class CameraFreecamMixin {
     @Inject(method = "alignWithEntity", at = @At("TAIL"))
     private void abd$freecamDetach(CallbackInfo ci) {
         if (ModuleManager.FREECAM.active()) detached = true;   // render your own body
+    }
+
+    /** Render the world as a spectator would, so it looks right when the free camera is inside blocks. */
+    @ModifyExpressionValue(method = "extractRenderState", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;isSpectator()Z"))
+    private boolean abd$freecamSpectator(boolean original) {
+        return original || ModuleManager.FREECAM.active();
     }
 }

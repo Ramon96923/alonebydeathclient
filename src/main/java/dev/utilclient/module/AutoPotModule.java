@@ -5,7 +5,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -59,7 +58,6 @@ public final class AutoPotModule extends Module {
         Inv.select(p, slot);
         float pitch = p.getXRot();
         p.setXRot(90f);
-        p.connection.send(new ServerboundMovePlayerPacket.Rot(p.getYRot(), 90f, p.onGround(), p.horizontalCollision));
         mc.gameMode.useItem(p, InteractionHand.MAIN_HAND);
         p.setXRot(pitch);
         Inv.select(p, prev);

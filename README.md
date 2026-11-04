@@ -1,4 +1,4 @@
-# DonutWaffen 3.0 (Fabric, Minecraft 26.3)
+# DonutWaffen 3.1 (Fabric, Minecraft 26.3)
 
 A utility client built for DonutSMP and anarchy servers (formerly AloneByDeath Client). Your old settings are copied over automatically on first launch.
 
@@ -25,6 +25,8 @@ Turn the card off under Client > ClickGUI > *Main menu card*.
 ## DonutSMP (the Donut panel)
 - **RTPBaseFinder** – keeps doing `/rtp east` (editable), scans every landing for storage, spawners and players, and stops with a chime and the coordinates when it finds a base. Can log you out on a find.
 - **AutoSell** – opens `/sell` when your inventory is full (or on a timer), moves your loot in and closes it, keeping your gear, hotbar and shulkers.
+- **AutoLeave** – disconnects the moment a non-friend player comes within a set radius (and switches AutoReconnect off).
+- **BaseFinder** – watches every chunk that loads around you and alerts (chat + chime + a marker column) when one has a stash: lots of containers, any spawner, or an ender chest/hopper setup. Can log you out on a find.
 - **TpaAccept** – accepts teleport requests from friends (or anyone) and presses the confirm button.
 - **StreamerMode** – hides the sidebar scoreboard and your HUD coordinates.
 - **Macros** – see below. `.coords` copies your coordinates.
@@ -50,7 +52,15 @@ Some settings are text (like RTPBaseFinder's *Command*). Click one, type, then p
 - **GlintColor** recolours enchantment glint (11 colours including rainbow).
 - **Fonts**: ClickGUI > *Font* picks Inter (default), Poppins, Manrope, JetBrains Mono or Outfit.
 
+## Main menu
+A custom DonutWaffen panorama (dusk sky with a giant donut and a waffle moon) and DonutWaffen splash texts replace the vanilla ones.
+
 ## Staying unbanned
+3.1 reworked how combat talks to the server (see `docs/CLIENT_NOTES.md` for the full table):
+- Silent rotations now ride in your normal movement packet instead of extra packets, and modules act at the start of the tick like real input.
+- **AutoCrystal** defaults to **Legit**: it turns your real view at a set speed and only places/breaks once your crosshair is actually on the block/crystal, one action per tick, with random delays and no same-tick slot swaps. *Silent* does the same server-side only; *Blatant* is the old instant mode for anarchy servers.
+- **AutoTotem** defaults to **Legit**: hotbar totems go to your offhand like pressing F; inventory clicks only happen with your inventory open.
+
 AutoHit now defaults to **Smooth** rotations (your view turns naturally and it only swings once you're facing the target), a 3.1 block reach, no hitting through walls and a small random miss chance. Velocity defaults to taking 85% knockback instead of none, **AntiBot** (on by default) skips the invisible bots anticheats use to catch kill auras, and Criticals' default never sends fake packets. Blatant modules (Flight, Speed, packet modes) can still be caught on strict servers.
 
 ## Saving

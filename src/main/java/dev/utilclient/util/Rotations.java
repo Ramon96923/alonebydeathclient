@@ -30,8 +30,9 @@ public final class Rotations {
         if ("Client".equals(mode)) {
             p.setYRot(r[0]);
             p.setXRot(r[1]);
-        } else if (p.connection != null) {
-            p.connection.send(new ServerboundMovePlayerPacket.Rot(r[0], r[1], p.onGround(), p.horizontalCollision));
+        } else {
+            // no extra look packet (that trips anticheat packet/timer checks): ride on the movement packet
+            RotationManager.towards(p, target, 180f);
         }
     }
 

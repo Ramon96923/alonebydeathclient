@@ -34,6 +34,7 @@ public final class FreecamModule extends Module {
 
     @Override
     protected void onEnable() {
+        lastFrame = 0;
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer p = mc.player;
         if (p == null) { setEnabled(false, false); return; }
@@ -82,8 +83,20 @@ public final class FreecamModule extends Module {
         LocalPlayer p = mc.player;
         if (disableOnDamage.get() && p.getHealth() < lastHealth) { setEnabled(false); return; }
         lastHealth = p.getHealth();
-        px = x; py = y; pz = z;
-        lastTick = System.nanoTime();
+    }
+
+    private long lastFrame;
+
+    /**
+     * Moves the camera, once per rendered frame, by real elapsed time. Moving per frame (not per game tick)
+     * keeps it smooth even when ticks stutter from lag or low TPS.
+     */
+    public void frame() {
+        Minecraft mc = Minecraft.getInstance();
+        long now = System.nanoTime();
+        double dt = lastFrame == 0 ? 0 : Math.min(0.1, (now - lastFrame) / 1e9);
+        lastFrame = now;
+        if (dt <= 0) return;
 
         double fwd = 0, side = 0, up = 0;
         if (mc.gui.screen() == null) {
@@ -97,23 +110,24 @@ public final class FreecamModule extends Module {
         double ry = Math.toRadians(yaw), rp = Math.toRadians(pitch);
         double cy = Math.cos(ry), sy = Math.sin(ry);
         double flat = lookFly.get() ? Math.cos(rp) : 1;
-        // forward along the view (pitch included when lookFly), strafe stays level
         double tx = -sy * flat * fwd + cy * side;
         double tz = cy * flat * fwd + sy * side;
         double ty = up + (lookFly.get() ? -Math.sin(rp) * fwd : 0);
         double len = Math.sqrt(tx * tx + ty * ty + tz * tz);
-        double v = speed.get() * (mc.options.keySprint.isDown() ? boost.get() : 1);
+        double v = speed.get() * 20 * (mc.options.keySprint.isDown() ? boost.get() : 1);   // blocks per second
         if (len > 1e-6) { tx = tx / len * v; ty = ty / len * v; tz = tz / len * v; }
 
-        double k = smooth.get() ? 0.35 : 1.0;
+        // frame-rate independent easing (same feel as before, at any FPS)
+        double k = smooth.get() ? 1 - Math.exp(-dt * 9) : 1;
         vx += (tx - vx) * k;
         vy += (ty - vy) * k;
         vz += (tz - vz) * k;
-        if (Math.abs(vx) < 1e-4 && tx == 0) vx = 0;
-        if (Math.abs(vy) < 1e-4 && ty == 0) vy = 0;
-        if (Math.abs(vz) < 1e-4 && tz == 0) vz = 0;
-        x += vx;
-        y += vy;
-        z += vz;
+        x += vx * dt;
+        y += vy * dt;
+        z += vz * dt;
     }
+
+    public double camX() { return x; }
+    public double camY() { return y; }
+    public double camZ() { return z; }
 }

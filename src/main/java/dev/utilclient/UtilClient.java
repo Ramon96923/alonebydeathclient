@@ -100,14 +100,14 @@ public class UtilClient implements ClientModInitializer {
 
     public static void openGuiNextTick() { openGuiNextTick = true; }
 
-    /** Mod version from fabric.mod.json, e.g. "3.2.0". */
+    /** Mod version from fabric.mod.json, e.g. "3.2.1". */
     public static String version() {
         try {
             return FabricLoader.getInstance().getModContainer(MOD_ID)
                     .map(c -> c.getMetadata().getVersion().getFriendlyString())
-                    .orElse("3.2.0");
+                    .orElse("3.2.1");
         } catch (Throwable t) {
-            return "3.2.0";
+            return "3.2.1";
         }
     }
 

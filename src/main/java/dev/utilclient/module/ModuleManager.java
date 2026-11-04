@@ -105,19 +105,24 @@ public final class ModuleManager {
     public static final TpaAcceptModule TPA_ACCEPT = new TpaAcceptModule();
     public static final AutoLeaveModule AUTO_LEAVE = new AutoLeaveModule();
     public static final BaseFinderModule BASE_FINDER = new BaseFinderModule();
+    public static final StaffAlertModule STAFF_ALERT = new StaffAlertModule();
+    // 3.2
+    public static final HotbarModule HOTBAR = new HotbarModule();
+    public static final EffectsModule EFFECTS = new EffectsModule();
+    public static final MusicModule MUSIC = new MusicModule();
 
     public static final List<Module> ALL = List.of(
-            CLICK_GUI, HUD, NOTIFICATIONS,
+            CLICK_GUI, HUD, NOTIFICATIONS, MUSIC,
             AUTO_HIT, TRIGGERBOT, AUTO_CLICKER, AIMBOT, CRITICALS, HITBOX, OLD_PVP, MACE, SPEAR,
             AUTO_TOTEM, AUTO_CRYSTAL, AUTO_ANCHOR, SURROUND, AUTO_ARMOR, AUTO_WEAPON,
             AUTO_TRAP, SELF_TRAP, HOLE_FILLER, AUTO_LOG, SHIELD_BREAKER, AUTO_POT, ANTI_BOT,
             KEY_PEARL, KEY_WIND_CHARGE, AUTO_DOUBLE_HAND, INV_TOTEM, CRYSTAL_MACRO, ANCHOR_MACRO, JUMP_RESET, W_TAP,
             SPRINT, AUTO_WALK, STEP, NO_FALL, VELOCITY, ELYTRA_FLY, FLIGHT, SPEED, JESUS, SCAFFOLD,
             ESP, NAMETAGS, TRACERS, BLOCK_ESP, HOLE_ESP, TRACKER, XRAY, FULLBRIGHT, ZOOM, NO_RENDER,
-            LOGOUT_SPOTS, BREADCRUMBS, FREECAM, STORAGE_ESP, GLINT_COLOR, TUNNEL_ESP, CROSSHAIR, TRAJECTORIES,
+            LOGOUT_SPOTS, BREADCRUMBS, FREECAM, STORAGE_ESP, GLINT_COLOR, TUNNEL_ESP, CROSSHAIR, TRAJECTORIES, HOTBAR, EFFECTS,
             AUTO_MINE, AUTO_PLACE, AUTO_TOOL, AUTO_EAT, FAST_PLACE, AUTO_RESPAWN, AUTO_MEND, CHEST_STEALER, ELYTRA_SWAP,
             FAKE_PLAYER, MIDDLE_CLICK_FRIEND, ANTI_AFK, AUTO_RECONNECT, VISUAL_RANGE, POP_COUNTER, MACROS,
-            RTP_BASE_FINDER, AUTO_SELL, STREAMER_MODE, TPA_ACCEPT, AUTO_LEAVE, BASE_FINDER);
+            RTP_BASE_FINDER, AUTO_SELL, STREAMER_MODE, TPA_ACCEPT, AUTO_LEAVE, BASE_FINDER, STAFF_ALERT);
 
     static {
         for (Module m : ALL) m.addMeta();

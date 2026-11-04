@@ -1,4 +1,4 @@
-# DonutWaffen 3.1 (Fabric, Minecraft 26.3)
+# DonutWaffen 3.2 (Fabric, Minecraft 26.3)
 
 A utility client built for DonutSMP and anarchy servers (formerly AloneByDeath Client). Your old settings are copied over automatically on first launch.
 
@@ -7,7 +7,25 @@ When you're on the title screen there's a **DonutWaffen** card in the top-left:
 - **Open Click GUI** opens the full menu right there, before you even join a world (it also shows the key it's bound to).
 - **AloneByDeath on Spotify** opens [the artist page](https://open.spotify.com/artist/0MVEjD74djJKq2ZJcNniE7) in your browser.
 
-Turn the card off under Client > ClickGUI > *Main menu card*.
+- The **AloneByDeath player** row under it plays your music: previous, play/pause, next, with the song and its progress.
+
+Turn the card off under Client > ClickGUI > *Main menu card*. With *Rounded game menus* on (the default), Minecraft's own buttons on every screen are drawn rounded in the client's style too.
+
+## AloneByDeath music player
+1. Put `.mp3` or `.wav` files in `.minecraft/config/donutwaffen/music/` (the folder is created on first launch; `.music folder` opens it).
+2. Press play on the main menu, toggle the **MusicPlayer** module (its bind works as a play/pause key), or type `.music`.
+
+Settings (Client > MusicPlayer): volume (separate from Minecraft's), shuffle, repeat (All / One / Off), *Play on launch* and the main-menu row. The **Music player** HUD element shows the song, a progress bar and the time.
+
+| Command | |
+|---|---|
+| `.music` / `.music play` / `.music pause` | Play / pause |
+| `.music next` / `.music prev` | Skip (prev restarts the song if it's past 3 seconds) |
+| `.music <name>` | Play the first song whose name contains that text |
+| `.music list` / `.music folder` / `.music vol 40` | List songs, open the folder, set volume |
+
+## Spotify HUD
+The **Spotify** HUD element shows what the Spotify desktop app is playing (song, artist, a live equalizer and the time since the song started), in the same rounded style as the rest of the HUD. `.spotify play|next|prev` controls it with the media keys. No login needed. Works best on Windows (it reads Spotify's window title); macOS uses AppleScript and Linux uses `playerctl`.
 
 ## Click GUI (Right Shift)
 - Drag a panel's header to move it. Right-click the header to fold it, and scroll inside tall panels.
@@ -29,6 +47,10 @@ Turn the card off under Client > ClickGUI > *Main menu card*.
 - **BaseFinder** – watches every chunk that loads around you and alerts (chat + chime + a marker column) when one has a stash: lots of containers, any spawner, or an ender chest/hopper setup. Can log you out on a find.
 - **TpaAccept** – accepts teleport requests from friends (or anyone) and presses the confirm button.
 - **StreamerMode** – hides the sidebar scoreboard and your HUD coordinates.
+- **StaffAlert** – spots staff in the tab list by their rank prefix (Owner, Admin, Manager, Mod, Helper, Dev, Support; editable under *Rank words*, plus *Extra names*). It:
+  - tells you when staff join or leave, and lists who's online when you join;
+  - keeps a live **Staff list** HUD element (and `.staff` in chat);
+  - warns when a staff member near you **turns invisible or vanishes** (still in tab but gone from the world), or **appears right next to you** (a teleport).
 - **Macros** – see below. `.coords` copies your coordinates.
 - Base finding also lives in Render: **StorageESP** now marks **spawners** (with an alert), **TunnelESP** finds player-dug 1x2 tunnels, and **BlockESP** can show **rotated deepslate** (always player-placed), pistons, beds and geodes.
 - PvP: **CrystalMacro**, **AnchorMacro**, **KeyPearl**, **KeyWindCharge**, **ElytraSwap**, **InvTotem** (legit offhand refill), **AutoDoubleHand**, **JumpReset**, **WTap**.
@@ -51,6 +73,14 @@ Some settings are text (like RTPBaseFinder's *Command*). Click one, type, then p
 - **Themes**: ClickGUI > *Theme* has presets (Donut, Waffle, Midnight, Ocean, Sakura, Mint, Crimson, Mono). Panels have soft shadows; the HUD has rounded boxes, adjustable opacity, a gradient watermark with FPS/ping and a **Keystrokes** element with CPS.
 - **GlintColor** recolours enchantment glint (11 colours including rainbow).
 - **Fonts**: ClickGUI > *Font* picks Inter (default), Poppins, Manrope, JetBrains Mono or Outfit.
+
+## Visual flair (Render > Effects)
+- **Death effects** when a player (or anything) dies: Lightning, Totem burst, Hearts, Souls, Flames or Fireworks, with an optional sound (Bell, Chime or Bass).
+- **Hit particles**, **jump circles** and a spinning **target ring** under whoever you're fighting.
+- **Hotbar** (Render) replaces the vanilla hotbar with a rounded one: the selection glides between slots in your accent colour.
+
+## HUD
+Every HUD box follows Client > HUD > *Corner radius* (default 6) and *Background opacity*, matching the click GUI. **Keystrokes** now has proper **LMB** and **RMB** keys, each with its own CPS.
 
 ## Main menu
 A custom DonutWaffen panorama (dusk sky with a giant donut and a waffle moon) and DonutWaffen splash texts replace the vanilla ones.
@@ -83,14 +113,18 @@ Everything saves automatically to `.minecraft/config/donutwaffen/config.json`: m
 | `.vclip <n>` / `.hclip <n>` | Teleport up or forward |
 | `.font on\|off` | Switch the custom font |
 | `.gui` | Open the click GUI |
+| `.music ...` | AloneByDeath music player (see above) |
+| `.spotify play\|next\|prev` | Control Spotify |
+| `.staff` | List staff online |
 
 ## Modules
 - **Combat:** AutoHit (kill aura), Triggerbot, AutoClicker, Aimbot, Criticals, Hitbox, OldPvP, Mace, Spear, AutoTotem, AutoCrystal, AutoAnchor, Surround, AutoArmor, AutoWeapon, AutoTrap, SelfTrap, HoleFiller, AutoLog, ShieldBreaker, AutoPot, AntiBot
 - **Movement:** Sprint, AutoWalk, Step, NoFall, Velocity, ElytraFly, Flight, Speed, Jesus, Scaffold
-- **Render:** ESP, Nametags, Tracers, BlockESP, HoleESP, Tracker, Xray, Fullbright, Zoom, NoRender, LogoutSpots, Breadcrumbs, Freecam, StorageESP, GlintColor
+- **Render:** ESP, Nametags, Tracers, BlockESP, HoleESP, Tracker, Xray, Fullbright, Zoom, NoRender, LogoutSpots, Breadcrumbs, Freecam, StorageESP, GlintColor, TunnelESP, Crosshair, Trajectories, Hotbar, Effects
 - **Player:** AutoMine, AutoPlace, AutoTool, AutoEat, FastPlace, AutoRespawn, AutoMend, ChestStealer
 - **Misc:** FakePlayer, MiddleClickFriend, AntiAFK, AutoReconnect, VisualRange, PopCounter, Macros
-- **Client:** ClickGUI, HUD, Notifications
+- **Client:** ClickGUI, HUD, Notifications, MusicPlayer
+- **Donut:** RTPBaseFinder, AutoSell, StreamerMode, TpaAccept, AutoLeave, BaseFinder, StaffAlert
 
 ### 26.3 combat (works with the crystal modules)
 - **Mace** – auto-swaps to a mace while you're falling and spoofs the drop so smash hits land for full damage, then swaps back.
@@ -135,4 +169,5 @@ This client is licensed under the **GNU GPL v3.0** (see `LICENSE.txt`), because 
 - The **Xray / Fullbright** render hooks (`LightmapMixin`, `ModelBlockRendererMixin`, the Indigo mixin) and the **Spear** / **AutoReconnect** approaches are adapted from **[Meteor Client](https://github.com/MeteorDevelopment/meteor-client)** (GPL-3.0), with ideas also from **[LiquidBounce](https://github.com/CCBlueX/LiquidBounce)** (GPL-3.0).
 - The GUI design takes inspiration from **Kami** and **Lambda**.
 - Ported files carry an attribution header; everything else is original to this project.
+- MP3 decoding uses **[JLayer](https://github.com/umjammer/jlayer)** (LGPL-2.1), bundled inside the jar.
 - Bundled UI fonts: **Inter**, **Poppins**, **Manrope**, **JetBrains Mono** (from Google Fonts) and **Outfit** by the Outfit Project Authors, under the SIL Open Font License 1.1 (licence files are in `assets/alonebydeathclient/font/`).

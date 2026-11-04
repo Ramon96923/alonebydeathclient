@@ -23,6 +23,7 @@ public abstract class MultiPlayerGameModeMixin {
             if (ModuleManager.SHIELD_BREAKER.isEnabled()) ModuleManager.SHIELD_BREAKER.beforeAttack(target);
             if (ModuleManager.MACE.isEnabled()) ModuleManager.MACE.beforeAttack(target);
             if (ModuleManager.W_TAP.isEnabled()) ModuleManager.W_TAP.beforeAttack();
+            if (ModuleManager.EFFECTS.isEnabled()) ModuleManager.EFFECTS.onAttack(target);
             if (ModuleManager.CRITICALS.isEnabled() && ModuleManager.CRITICALS.beforeAttack(target)) ci.cancel();
         } catch (Throwable ignored) {
             // the attack itself must still happen

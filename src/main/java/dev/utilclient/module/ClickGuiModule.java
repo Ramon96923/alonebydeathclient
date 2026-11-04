@@ -20,6 +20,7 @@ public final class ClickGuiModule extends Module {
     public final NumberSetting maxHeight = num("Max panel height", 300, 120, 600, 10).desc("Taller panels scroll");
     public final NumberSetting opacity = num("Panel opacity", 225, 60, 255, 5);
     public final BoolSetting shadow = bool("Panel shadow", true).desc("Soft shadow behind the panels");
+    public final BoolSetting roundedMenus = bool("Rounded game menus", true).desc("Restyle Minecraft's own menu buttons to match");
     public final ModeSetting background = mode("Background", "Dim", "Dim", "Blur", "None").desc("What happens behind the GUI");
     public final BoolSetting customFont = bool("Custom font", true).desc("Use a bundled font instead of Minecraft's (also: .font off)");
     public final ModeSetting font = mode("Font", "Inter", "Inter", "Poppins", "Manrope", "JetBrains Mono", "Outfit")

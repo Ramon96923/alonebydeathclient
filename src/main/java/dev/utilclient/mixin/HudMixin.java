@@ -30,6 +30,11 @@ public abstract class HudMixin {
         if (ModuleManager.CROSSHAIR.isEnabled()) ci.cancel();   // the custom one is drawn instead
     }
 
+    @Inject(method = "extractItemHotbar", at = @At("HEAD"), cancellable = true)
+    private void abd$hotbar(CallbackInfo ci) {
+        if (ModuleManager.HOTBAR.isEnabled()) ci.cancel();   // the rounded one is drawn instead
+    }
+
     @Inject(method = "extractEffects", at = @At("HEAD"), cancellable = true)
     private void abd$effects(CallbackInfo ci) {
         if (ModuleManager.NO_RENDER.noPotionIcons()) ci.cancel();

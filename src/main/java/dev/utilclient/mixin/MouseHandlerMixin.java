@@ -17,7 +17,8 @@ public abstract class MouseHandlerMixin {
         try {
             dev.utilclient.module.HudModule.onClick(info.button());   // keystrokes CPS
             // title-screen card buttons (left click); swallow the click so vanilla doesn't also handle it
-            if (info.button() == 0 && dev.utilclient.gui.MainMenu.onMousePress()) { ci.cancel(); return; }
+            // 26.3 uses SDL button numbers here, so compare with the constants, never 0/1
+            if (info.button() == InputConstants.MOUSE_BUTTON_LEFT && dev.utilclient.gui.MainMenu.onMousePress()) { ci.cancel(); return; }
             if (info.button() == InputConstants.MOUSE_BUTTON_MIDDLE && ModuleManager.MIDDLE_CLICK_FRIEND.isEnabled()) {
                 ModuleManager.MIDDLE_CLICK_FRIEND.onMiddleClick();
             }

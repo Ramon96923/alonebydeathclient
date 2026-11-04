@@ -44,6 +44,12 @@ public class UtilClient implements ClientModInitializer {
         } catch (Throwable t) {
             LOG.log(Level.WARNING, "Config load failed", t);
         }
+        dev.utilclient.module.MusicModule.booted = true;
+        try {
+            dev.utilclient.music.MusicPlayer.rescan();
+        } catch (Throwable t) {
+            LOG.log(Level.WARNING, "Music folder scan failed", t);
+        }
 
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "overlay"), (graphics, delta) -> {
             RenderState.frame();
@@ -84,6 +90,7 @@ public class UtilClient implements ClientModInitializer {
         // Title-screen card: client name/version, an Open Click GUI button and a Spotify link.
         // Also the Reconnect / AutoReconnect buttons on the disconnect screen.
         ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
+            dev.utilclient.gui.VanillaButtons.attach(screen);
             if (screen instanceof TitleScreen) MainMenu.attach(screen);
             else if (screen instanceof net.minecraft.client.gui.screens.DisconnectedScreen) {
                 ModuleManager.AUTO_RECONNECT.attach(screen);
@@ -93,14 +100,14 @@ public class UtilClient implements ClientModInitializer {
 
     public static void openGuiNextTick() { openGuiNextTick = true; }
 
-    /** Mod version from fabric.mod.json, e.g. "3.1.0". */
+    /** Mod version from fabric.mod.json, e.g. "3.2.0". */
     public static String version() {
         try {
             return FabricLoader.getInstance().getModContainer(MOD_ID)
                     .map(c -> c.getMetadata().getVersion().getFriendlyString())
-                    .orElse("3.1.0");
+                    .orElse("3.2.0");
         } catch (Throwable t) {
-            return "3.1.0";
+            return "3.2.0";
         }
     }
 

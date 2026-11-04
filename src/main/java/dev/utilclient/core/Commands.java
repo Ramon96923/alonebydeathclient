@@ -61,6 +61,14 @@ public final class Commands {
             case "gui", "clickgui" -> UtilClient.openGuiNextTick();
             case "font" -> font(a);
             case "macro", "macros", "m" -> macro(a);
+            case "music", "mp" -> music(a);
+            case "spotify", "sp" -> spotify(a);
+            case "staff" -> {
+                var list = ModuleManager.STAFF_ALERT.online();
+                if (!ModuleManager.STAFF_ALERT.isEnabled()) Chat.info("Turn on StaffAlert to track staff.");
+                else if (list.isEmpty()) Chat.info("No staff in the tab list.");
+                else for (var st : list) Chat.info("\u00a7c" + st.rank() + " \u00a7f" + st.name());
+            }
             case "coords", "pos" -> {
                 var p = Minecraft.getInstance().player;
                 if (p == null) return;
@@ -92,6 +100,64 @@ public final class Commands {
         Chat.info(p + "coords  -  copy your coordinates");
         Chat.info(p + "macro add <command>  -  bind a command to a key (chain with &&)");
         Chat.info(p + "macro list | del <number> | clear | donut  -  manage macros / DonutSMP presets");
+        Chat.info(p + "music play|pause|next|prev|list|folder|vol <0-100>|<song name>  -  AloneByDeath player");
+        Chat.info(p + "spotify play|next|prev  -  control the Spotify app");
+        Chat.info(p + "staff  -  list staff online (StaffAlert)");
+    }
+
+    private static void music(String[] a) {
+        var mod = ModuleManager.MUSIC;
+        String sub = a.length == 0 ? "toggle" : a[0].toLowerCase(java.util.Locale.ROOT);
+        mod.apply();
+        switch (sub) {
+            case "play", "resume" -> dev.utilclient.music.MusicPlayer.play();
+            case "pause", "stop" -> dev.utilclient.music.MusicPlayer.pause();
+            case "toggle" -> dev.utilclient.music.MusicPlayer.toggle();
+            case "next", "skip", "n" -> dev.utilclient.music.MusicPlayer.next();
+            case "prev", "previous", "back", "p" -> dev.utilclient.music.MusicPlayer.previous();
+            case "list", "ls" -> {
+                int n = dev.utilclient.music.MusicPlayer.rescan();
+                if (n == 0) { Chat.info("No songs yet. Put .mp3/.wav files in " + dev.utilclient.music.MusicPlayer.folder()); return; }
+                var names = dev.utilclient.music.MusicPlayer.trackNames();
+                Chat.info(n + " songs:");
+                for (int i = 0; i < Math.min(names.size(), 30); i++) Chat.info((i + 1) + ". " + names.get(i));
+                if (names.size() > 30) Chat.info("... and " + (names.size() - 30) + " more");
+                return;
+            }
+            case "folder", "dir", "rescan" -> {
+                int n = dev.utilclient.music.MusicPlayer.rescan();
+                Chat.info("Music folder: " + dev.utilclient.music.MusicPlayer.folder() + " (" + n + " songs)");
+                try {
+                    com.mojang.blaze3d.Blaze3D.openUri(dev.utilclient.music.MusicPlayer.folder().toUri());
+                } catch (Throwable ignored) {
+                    // no desktop
+                }
+                return;
+            }
+            case "vol", "volume" -> {
+                if (a.length < 2) throw new IllegalArgumentException("usage: music vol <0-100>");
+                mod.changeVolume(Integer.parseInt(a[1]));
+                Chat.info("Music volume " + a[1] + "%");
+                return;
+            }
+            default -> {
+                String q = String.join(" ", a);
+                String hit = dev.utilclient.music.MusicPlayer.playByName(q);
+                if (hit == null) { Chat.error("No song matching '" + q + "'"); return; }
+            }
+        }
+        if (!dev.utilclient.music.MusicPlayer.error().isEmpty()) Chat.info(dev.utilclient.music.MusicPlayer.error());
+        mod.sync();
+    }
+
+    private static void spotify(String[] a) {
+        String sub = a.length == 0 ? "play" : a[0].toLowerCase(java.util.Locale.ROOT);
+        switch (sub) {
+            case "play", "pause", "toggle" -> dev.utilclient.music.Spotify.playPause();
+            case "next", "skip", "n" -> dev.utilclient.music.Spotify.next();
+            case "prev", "previous", "back", "p" -> dev.utilclient.music.Spotify.previous();
+            default -> throw new IllegalArgumentException("usage: spotify play|next|prev");
+        }
     }
 
     private static Module module(String[] a, int i) {

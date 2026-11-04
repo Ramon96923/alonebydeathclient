@@ -31,6 +31,7 @@ public final class HudModule extends Module {
     private final BoolSetting backgrounds = bool("Backgrounds", true);
     private final NumberSetting bgOpacity = num("Background opacity", 140, 20, 255, 5).visible(backgrounds::get);
     private final BoolSetting rounded = bool("Rounded", true).desc("Rounded corners on HUD boxes");
+    private final NumberSetting radius = num("Corner radius", 6, 1, 10, 1).visible(rounded::get);
     private final BoolSetting watermarkInfo = bool("Watermark info", true).desc("FPS and ping next to the name");
     private final BoolSetting lowercase = bool("Lowercase", false);
     private final BoolSetting listInfo = bool("List mode info", true).desc("Show a module's mode next to its name");
@@ -56,6 +57,9 @@ public final class HudModule extends Module {
         elements.add(new Element("Target HUD", true, false, false, 0, 0, this::targetHud).centered().shift(14).mid());
         elements.add(new Element("Potions", false, true, true, 4, 40, this::potions));
         elements.add(new Element("Keystrokes", false, false, true, 4, 60, this::keystrokes));
+        elements.add(new Element("Staff list", true, false, false, 4, 124, this::staff));
+        elements.add(new Element("Spotify", true, false, false, 4, 40, this::spotify));
+        elements.add(new Element("Music player", true, false, false, 4, 80, this::music));
     }
 
     // ---- element model -------------------------------------------------------------------------
@@ -154,6 +158,9 @@ public final class HudModule extends Module {
     @Override
     public void renderHud(GuiGraphicsExtractor g, float partialTick) {
         int sw = g.guiWidth(), sh = g.guiHeight();
+        for (Element e : elements) if (e.id.equals("Spotify")) {
+            if (e.on.get()) dev.utilclient.music.Spotify.ensureStarted(); else dev.utilclient.music.Spotify.stop();
+        }
         for (Element e : elements) {
             if (!e.on.get()) continue;
             e.placeDefault(sw, sh);
@@ -181,7 +188,13 @@ public final class HudModule extends Module {
         };
     }
 
-    private void bg(GuiGraphicsExtractor g, int x0, int y0, int x1, int y1) { bg(g, x0, y0, x1, y1, 4); }
+    private void bg(GuiGraphicsExtractor g, int x0, int y0, int x1, int y1) { bg(g, x0, y0, x1, y1, radius.getInt()); }
+
+    public int cornerRadius() { return rounded.get() ? radius.getInt() : 0; }
+
+    public int bgColor() { return Draw.alpha(0x0B0B10, backgrounds.get() ? bgOpacity.getInt() : 0); }
+
+    public int accent(float offset) { return color(offset); }
 
     private void bg(GuiGraphicsExtractor g, int x0, int y0, int x1, int y1, int radius) {
         if (!backgrounds.get()) return;
@@ -220,7 +233,7 @@ public final class HudModule extends Module {
         }
         int w = Fonts.width(a, true) + Fonts.width(b) + Fonts.width(extra) + 12, h = 15;
         if (dry) return size(w, h);
-        bg(g, x, y, x + w, y + h, 5);
+        bg(g, x, y, x + w, y + h, radius.getInt() + 1);
         // accent strip + the name in a per-letter gradient
         Draw.round(g, x + 5, y + h - 2, x + w - 5, y + h - 1, 0, Draw.withAlpha(color(0f), 0.8f));
         int cx = x + 6;
@@ -278,7 +291,7 @@ public final class HudModule extends Module {
             int slide = (int) ((1f - e) * (w + 4));
             int rx = alignRight ? x + maxW - w + slide : x - slide;
             int col = color(i * 0.06f);
-            bg(g, rx, cy, rx + w, cy + rowH, 2);
+            bg(g, rx, cy, rx + w, cy + rowH, Math.max(2, radius.getInt() / 2));
             if (alignRight) g.fill(rx + w - 1, cy, rx + w, cy + rowH, col);
             else g.fill(rx, cy, rx + 1, cy + rowH, col);
             Fonts.text(g, name, rx + 4, cy + 1, col);
@@ -443,6 +456,122 @@ public final class HudModule extends Module {
         return size(w, h);
     }
 
+    // ---- staff / music / spotify ---------------------------------------------------------------
+
+    private int[] staff(GuiGraphicsExtractor g, int x, int y, boolean right, boolean dry) {
+        StaffAlertModule sa = ModuleManager.STAFF_ALERT;
+        List<StaffAlertModule.Staff> list = sa.isEnabled() ? sa.online() : List.of();
+        if (list.isEmpty() && editing) list = List.of(new StaffAlertModule.Staff("ExampleAdmin", "Admin"), new StaffAlertModule.Staff("SomeMod", "Mod"));
+        if (list.isEmpty()) return size(0, 0);
+        String head = txt("Staff online");
+        String count = String.valueOf(list.size());
+        int rankW = 0, nameW = 0;
+        for (var st : list) { rankW = Math.max(rankW, Fonts.width(txt(st.rank()))); nameW = Math.max(nameW, Fonts.width(st.name())); }
+        int shown = Math.min(list.size(), 12);
+        int w = Math.max(Fonts.width(head, true) + Fonts.width(count) + 26, rankW + nameW + 22), h = 17 + shown * 10 + 3;
+        if (dry) return size(w, h);
+        bg(g, x, y, x + w, y + h);
+        // pulsing red dot = live
+        float pulse = 0.55f + 0.45f * (float) Math.abs(Math.sin(System.currentTimeMillis() / 400.0));
+        Draw.round(g, x + 6, y + 6, x + 10, y + 10, 2, Draw.withAlpha(0xFFFF4D5E, pulse));
+        Fonts.text(g, head, x + 14, y + 4, 0xFFFFFFFF, true);
+        int pw = Fonts.width(count) + 8;
+        Draw.round(g, x + w - pw - 4, y + 3, x + w - 4, y + 13, 4, Draw.withAlpha(color(0f), 0.85f));
+        Fonts.text(g, count, x + w - pw, y + 4, 0xFFFFFFFF);
+        g.fill(x + 6, y + 15, x + w - 6, y + 16, 0x22FFFFFF);
+        for (int i = 0; i < shown; i++) {
+            var st = list.get(i);
+            int ry = y + 18 + i * 10;
+            Fonts.text(g, txt(st.rank()), x + 7, ry, rankColor(st.rank()));
+            Fonts.text(g, st.name(), x + 13 + rankW, ry, 0xFFE0E0EA);
+        }
+        return size(w, h);
+    }
+
+    private static int rankColor(String rank) {
+        String r = rank.toLowerCase(Locale.ROOT);
+        if (r.contains("owner") || r.contains("admin") || r.contains("manager")) return 0xFFFF5A5A;
+        if (r.contains("mod")) return 0xFF5AC8FF;
+        if (r.contains("dev")) return 0xFFB57BFF;
+        return 0xFF7BE38A;
+    }
+
+    private static String time(long ms) {
+        long s = Math.max(0, ms / 1000);
+        return String.format(Locale.ROOT, "%d:%02d", s / 60, s % 60);
+    }
+
+    /** Shared now-playing card: cover tile with equalizer, title, subtitle and an optional progress bar. */
+    private int[] nowPlaying(GuiGraphicsExtractor g, int x, int y, boolean dry, String title, String sub, int tile,
+                             boolean playing, float progress, String left, String rightTxt) {
+        int textW = Math.max(110, Math.min(170, Math.max(Fonts.width(title, true), Fonts.width(sub)) + 4));
+        int w = 8 + 26 + 7 + textW + 8, h = progress >= 0 ? 42 : 34;
+        if (dry) return size(w, h);
+        bg(g, x, y, x + w, y + h, radius.getInt() + 1);
+        int r = Math.max(3, cornerRadius() - 1);
+        // cover tile
+        int tx = x + 4, ty = y + 4;
+        Draw.round(g, tx, ty, tx + 26, ty + 26, r, tile);
+        Draw.gradientV(g, tx + 2, ty + 13, tx + 24, ty + 24, 0x00000000, 0x40000000);
+        double t = System.currentTimeMillis() / 160.0;
+        for (int i = 0; i < 4; i++) {
+            int bh = playing ? 3 + (int) Math.round(9 * Math.abs(Math.sin(t + i * 1.4))) : 3;
+            g.fill(tx + 6 + i * 4, ty + 20 - bh, tx + 8 + i * 4, ty + 20, 0xF0FFFFFF);
+        }
+        int lx = tx + 26 + 7;
+        Fonts.text(g, Fonts.fit(title, textW - 8), lx, y + 6, 0xFFFFFFFF, true);
+        Fonts.text(g, Fonts.fit(sub, textW), lx, y + 18, 0xFF9A9AB0);
+        if (progress >= 0) {
+            int by = y + 34, bx1 = x + w - 6;
+            int bx0 = x + 6;
+            Draw.round(g, bx0, by, bx1, by + 3, 1, 0x30FFFFFF);
+            int fx = bx0 + (int) ((bx1 - bx0) * Math.max(0f, Math.min(1f, progress)));
+            if (fx > bx0 + 1) Draw.round(g, bx0, by, fx, by + 3, 1, color(0f));
+            if (left != null) {
+                int tw = Fonts.width(rightTxt);
+                Fonts.text(g, rightTxt, x + w - 6 - tw, y + 22, 0xFF7A7A90);
+            }
+        }
+        return size(w, h);
+    }
+
+    private int[] spotify(GuiGraphicsExtractor g, int x, int y, boolean right, boolean dry) {
+        String title, sub;
+        boolean playing = dev.utilclient.music.Spotify.playing();
+        if (playing) {
+            title = dev.utilclient.music.Spotify.title();
+            sub = dev.utilclient.music.Spotify.artist();
+            if (sub.isEmpty()) sub = "Spotify";
+        } else if (dev.utilclient.music.Spotify.running()) {
+            title = "Paused";
+            sub = "Spotify";
+        } else if (editing) {
+            title = "Song title";
+            sub = "AloneByDeath";
+        } else {
+            return size(0, 0);
+        }
+        int[] r = nowPlaying(g, x, y, dry, title, sub, 0xFF1DB954, playing, -1, null, null);
+        if (!dry && playing) {
+            String tag = playing ? time(System.currentTimeMillis() - dev.utilclient.music.Spotify.trackSince()) : "paused";
+            Fonts.text(g, tag, x + r[0] - 6 - Fonts.width(tag), y + 18, 0xFF1DB954);
+        }
+        return r;
+    }
+
+    private int[] music(GuiGraphicsExtractor g, int x, int y, boolean right, boolean dry) {
+        ModuleManager.MUSIC.sync();
+        String now = dev.utilclient.music.MusicPlayer.nowPlaying();
+        if (now.isEmpty() && !editing) return size(0, 0);
+        boolean playing = dev.utilclient.music.MusicPlayer.playing();
+        String title = now.isEmpty() ? "Song title" : now;
+        String sub = (playing ? "AloneByDeath Player" : "Paused");
+        long pos = dev.utilclient.music.MusicPlayer.positionMs(), len = dev.utilclient.music.MusicPlayer.lengthMs();
+        float prog = len > 0 ? pos / (float) len : 0f;
+        int tile = Draw.mix(color(0f), 0xFF000000, 0.15f);
+        return nowPlaying(g, x, y, dry, title, sub, tile, playing, prog, time(pos), time(pos) + " / " + time(len));
+    }
+
     // ---- keystrokes -----------------------------------------------------------------------------
 
     private static final java.util.ArrayDeque<Long> LEFT = new java.util.ArrayDeque<>(), RIGHT = new java.util.ArrayDeque<>();
@@ -450,8 +579,8 @@ public final class HudModule extends Module {
     /** From MouseHandlerMixin on every mouse press: feeds the CPS counters. */
     public static void onClick(int button) {
         long now = System.currentTimeMillis();
-        if (button == 0) LEFT.addLast(now);
-        else if (button == 1) RIGHT.addLast(now);
+        if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) LEFT.addLast(now);
+        else if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_RIGHT) RIGHT.addLast(now);
     }
 
     private static int cps(java.util.ArrayDeque<Long> q) {
@@ -460,17 +589,24 @@ public final class HudModule extends Module {
         return q.size();
     }
 
+    private void mouseKey(GuiGraphicsExtractor g, int x, int y, int w, int h, String label, int cps, boolean down) {
+        key(g, x, y, w, h, "", down);
+        int fg = down ? 0xFF101014 : 0xFFE6E6EE;
+        Fonts.centered(g, label, x + w / 2, y + 3, fg, true);
+        Fonts.centered(g, cps + " CPS", x + w / 2, y + 13, down ? 0xFF2A2A30 : 0xFF9A9AB0, false);
+    }
+
     private void key(GuiGraphicsExtractor g, int x, int y, int w, int h, String label, boolean down) {
         float t = 0f;
         if (down) t = 1f;
         int fill = down ? Draw.withAlpha(color(0f), 0.85f) : Draw.alpha(0x0B0B10, bgOpacity.getInt());
-        if (rounded.get()) Draw.round(g, x, y, x + w, y + h, 3, fill);
+        if (rounded.get()) Draw.round(g, x, y, x + w, y + h, Math.max(3, radius.getInt() - 1), fill);
         else g.fill(x, y, x + w, y + h, fill);
         Fonts.centered(g, label, x + w / 2, y + h / 2 - 4, down ? 0xFF101014 : 0xFFE6E6EE, t > 0.5f);
     }
 
     private int[] keystrokes(GuiGraphicsExtractor g, int x, int y, boolean right, boolean dry) {
-        int k = 18, gap = 2, w = k * 3 + gap * 2, h = k * 3 + gap * 2 + 10;
+        int k = 18, mk = 24, gap = 2, w = k * 3 + gap * 2, h = k * 2 + mk + gap * 3 + 8;
         if (dry) return size(w, h);
         Minecraft mc = Minecraft.getInstance();
         var o = mc.options;
@@ -479,9 +615,10 @@ public final class HudModule extends Module {
         key(g, x + k + gap, y + k + gap, k, k, "S", o.keyDown.isDown());
         key(g, x + (k + gap) * 2, y + k + gap, k, k, "D", o.keyRight.isDown());
         int half = (w - gap) / 2;
-        key(g, x, y + (k + gap) * 2, half, k, cps(LEFT) + " CPS", o.keyAttack.isDown());
-        key(g, x + half + gap, y + (k + gap) * 2, half, k, cps(RIGHT) + " CPS", o.keyUse.isDown());
-        key(g, x, y + (k + gap) * 3, w, 8, "", o.keyJump.isDown());
+        // left half = attack (LMB), right half = use (RMB), each with its own CPS
+        mouseKey(g, x, y + (k + gap) * 2, half, mk, "LMB", cps(LEFT), o.keyAttack.isDown());
+        mouseKey(g, x + half + gap, y + (k + gap) * 2, w - half - gap, mk, "RMB", cps(RIGHT), o.keyUse.isDown());
+        key(g, x, y + (k + gap) * 2 + mk + gap, w, 8, "", o.keyJump.isDown());
         return size(w, h);
     }
 }

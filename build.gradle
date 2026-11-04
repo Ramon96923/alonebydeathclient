@@ -6,13 +6,18 @@ plugins {
 version = project.mod_version
 base.archivesName = project.archives_base_name
 
-repositories {}
+repositories {
+    mavenCentral()   // JLayer (MP3 decoding for the music player)
+}
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     // 26.x is unobfuscated: no mappings, no modImplementation
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    // MP3 decoder, LGPL-2.1, bundled inside the mod jar
+    implementation "javazoom:jlayer:1.0.1"
+    include "javazoom:jlayer:1.0.1"
 }
 
 processResources {

@@ -33,6 +33,8 @@ public final class MainMenu {
     // button rectangles from the last frame, in screen coordinates
     private static int guiX0, guiY0, guiX1, guiY1;
     private static int spX0, spY0, spX1, spY1;
+    // music player row: previous, play/pause, next
+    private static int mpY0 = -1, mpY1, prevX0, prevX1, playX0, playX1, nextX0, nextX1;
 
     private MainMenu() {}
 
@@ -44,7 +46,8 @@ public final class MainMenu {
             shownOn = screen;
             shownAt = System.currentTimeMillis();
         }
-        guiX1 = spX1 = -1;   // nothing clickable until the first frame lays the card out
+        guiX1 = spX1 = -1;
+        mpY0 = -1;   // nothing clickable until the first frame lays the card out
 
         ScreenEvents.afterExtract(screen).register((s, g, mx, my, tick) -> {
             if (!enabled()) return;
@@ -58,7 +61,7 @@ public final class MainMenu {
 
         // backup path; the main one is onMousePress() from MouseHandlerMixin
         ScreenMouseEvents.allowMouseClick(screen).register((s, event) -> {
-            if (!enabled() || event.button() != 0) return true;
+            if (!enabled() || event.button() != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return true;
             return !click(s, event.x(), event.y());
         });
     }
@@ -68,7 +71,21 @@ public final class MainMenu {
     /** Runs the button under (x, y), if any. @return true if a button was clicked */
     private static boolean click(Screen s, double x, double y) {
         long now = System.currentTimeMillis();
-        if (now - lastClick < 200) return inside(x, y, guiX0, guiY0, guiX1, guiY1) || inside(x, y, spX0, spY0, spX1, spY1);
+        if (now - lastClick < 200) return inside(x, y, guiX0, guiY0, guiX1, guiY1) || inside(x, y, spX0, spY0, spX1, spY1)
+                || (mpY0 >= 0 && inside(x, y, prevX0, mpY0, nextX1, mpY1));
+        if (mpY0 >= 0 && y >= mpY0 && y < mpY1) {
+            Runnable act = null;
+            if (x >= prevX0 && x < prevX1) act = dev.utilclient.music.MusicPlayer::previous;
+            else if (x >= playX0 && x < playX1) act = dev.utilclient.music.MusicPlayer::toggle;
+            else if (x >= nextX0 && x < nextX1) act = dev.utilclient.music.MusicPlayer::next;
+            if (act != null) {
+                lastClick = now;
+                ModuleManager.MUSIC.apply();
+                act.run();
+                ModuleManager.MUSIC.sync();
+                return true;
+            }
+        }
         if (inside(x, y, guiX0, guiY0, guiX1, guiY1)) {
             lastClick = now;
             Minecraft.getInstance().gui.setScreen(new ClickGui(s));
@@ -126,7 +143,8 @@ public final class MainMenu {
         int titleW = (int) Math.ceil(Fonts.width(title, true) * titleScale);
         int w = Math.max(160, Math.max(titleW, Math.max(Fonts.width(sub), Fonts.width(spLabel, true) + 26)) + pad * 2);
         int x = 8 - (int) ((1f - e) * 14f), y = 8;
-        int h = 96;
+        boolean player = ModuleManager.MUSIC.menuPlayer();
+        int h = player ? 124 : 96;
 
         // card
         Draw.round(g, x, y, x + w, y + h, r + 2, Draw.alpha(CARD, (int) (205 * a)));
@@ -170,12 +188,69 @@ public final class MainMenu {
         Fonts.text(g, spLabel, bx0 + 19, sy0 + 5, Draw.withAlpha(0xFF0B0B0B, a), true);
         spX0 = bx0; spY0 = sy0; spX1 = bx1; spY1 = sy0 + bh;
 
+        if (player) drawPlayer(g, mx, my, bx0, sy0 + bh + 6, bx1, r, acc, a);
+        else mpY0 = -1;
+
         if (hoverSp) {
             String hint = "open.spotify.com";
             Fonts.text(g, hint, x + w / 2 - Fonts.width(hint) / 2, y + h + 3, Draw.withAlpha(0xFF9A9AB0, a));
         } else if (hoverGui) {
             String hint = "Change modules and settings right here";
             Fonts.text(g, hint, x + w / 2 - Fonts.width(hint) / 2, y + h + 3, Draw.withAlpha(0xFF9A9AB0, a));
+        }
+    }
+
+    /** The AloneByDeath player row: song name with progress underneath, and prev / play-pause / next. */
+    private static void drawPlayer(GuiGraphicsExtractor g, int mx, int my, int x0, int y0, int x1, int r, int acc, float a) {
+        int h = 22;
+        Draw.round(g, x0, y0, x1, y0 + h, r, Draw.withAlpha(0xFF1A1A24, a));
+        boolean playing = dev.utilclient.music.MusicPlayer.playing();
+        String song = dev.utilclient.music.MusicPlayer.nowPlaying();
+        int n = dev.utilclient.music.MusicPlayer.trackCount();
+        String label = !song.isEmpty() ? song : n > 0 ? "AloneByDeath Player  \u00b7  " + n + " songs" : "AloneByDeath Player  \u00b7  add songs";
+        // three round buttons on the right
+        int bs = 14, gap = 3, by = y0 + 4;
+        nextX1 = x1 - 4; nextX0 = nextX1 - bs;
+        playX1 = nextX0 - gap; playX0 = playX1 - bs;
+        prevX1 = playX0 - gap; prevX0 = prevX1 - bs;
+        mpY0 = by; mpY1 = by + bs;
+        int[][] btn = {{prevX0, prevX1}, {playX0, playX1}, {nextX0, nextX1}};
+        for (int i = 0; i < 3; i++) {
+            boolean hov = inside(mx, my, btn[i][0], by, btn[i][1], by + bs);
+            int fill = i == 1 ? (hov ? Draw.mix(acc, 0xFFFFFFFF, 0.18f) : acc) : (hov ? 0xFF34344A : 0xFF26263A);
+            Draw.round(g, btn[i][0], by, btn[i][1], by + bs, bs / 2, Draw.withAlpha(fill, a));
+        }
+        int white = Draw.withAlpha(0xFFFFFFFF, a);
+        // previous: bar + triangle, next: triangle + bar, play: triangle, pause: two bars
+        triangle(g, prevX0 + 6, by + 4, -1, white); g.fill(prevX0 + 4, by + 4, prevX0 + 5, by + 11, white);
+        triangle(g, nextX0 + 4, by + 4, 1, white); g.fill(nextX0 + 9, by + 4, nextX0 + 10, by + 11, white);
+        if (playing) {
+            g.fill(playX0 + 4, by + 4, playX0 + 6, by + 11, white);
+            g.fill(playX0 + 8, by + 4, playX0 + 10, by + 11, white);
+        } else {
+            triangle(g, playX0 + 5, by + 4, 1, white);
+        }
+        int tw = prevX0 - x0 - 10;
+        Fonts.text(g, Fonts.fit(label, tw), x0 + 6, y0 + 5, Draw.withAlpha(song.isEmpty() ? 0xFF9A9AB0 : 0xFFFFFFFF, a));
+        long len = dev.utilclient.music.MusicPlayer.lengthMs();
+        if (!song.isEmpty() && len > 0) {
+            float p = Math.min(1f, dev.utilclient.music.MusicPlayer.positionMs() / (float) len);
+            int bx0 = x0 + 6, bx1 = prevX0 - 6, py = y0 + h - 5;
+            g.fill(bx0, py, bx1, py + 2, Draw.withAlpha(0x30FFFFFF, a));
+            g.fill(bx0, py, bx0 + (int) ((bx1 - bx0) * p), py + 2, Draw.withAlpha(acc, a));
+        }
+        String err = dev.utilclient.music.MusicPlayer.error();
+        if (!err.isEmpty() && inside(mx, my, prevX0, by, nextX1, by + bs)) {
+            Fonts.text(g, Fonts.fit(err, 260), x0, y0 + h + 4, Draw.withAlpha(0xFFFF8080, a));
+        }
+    }
+
+    /** A small 7-tall triangle pointing right (dir 1) or left (dir -1), drawn as stacked lines. */
+    private static void triangle(GuiGraphicsExtractor g, int x, int y, int dir, int color) {
+        for (int i = 0; i < 7; i++) {
+            int len = 4 - Math.abs(i - 3);
+            if (dir > 0) g.fill(x, y + i, x + len, y + i + 1, color);
+            else g.fill(x + 4 - len, y + i, x + 4, y + i + 1, color);
         }
     }
 

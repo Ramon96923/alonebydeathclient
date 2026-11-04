@@ -9,6 +9,14 @@ on:
         description: "resource path regex"
         required: false
         default: "textures/gui/title"
+      cat:
+        description: "jar entries to print"
+        required: false
+        default: ""
+      flags:
+        description: "javap flags"
+        required: false
+        default: "-p"
 jobs:
   inspect:
     runs-on: ubuntu-latest
@@ -29,7 +37,11 @@ jobs:
           echo "JAR=$JAR"
           find ~/.gradle .gradle -path '*minecraft*' -name '*.jar' -size +5M 2>/dev/null | head
           unzip -l "$JAR" | grep -E "${{ github.event.inputs.grep }}" | head -80
+          for e in ${{ github.event.inputs.cat }}; do
+            echo "===== FILE $e"
+            unzip -p "$JAR" "$e" | head -120
+          done
           for c in ${{ github.event.inputs.classes }}; do
             echo "===== $c"
-            javap -p -cp "$JAR" "$c" | head -150
+            javap ${{ github.event.inputs.flags }} -cp "$JAR" "$c" | grep -v 'lambda\$' | head -220
           done

@@ -63,6 +63,31 @@ public final class Commands {
             case "macro", "macros", "m" -> macro(a);
             case "music", "mp" -> music(a);
             case "spotify", "sp" -> spotify(a);
+            case "rtpbf", "basefinder" -> {
+                var bf = ModuleManager.RTP_BASE_FINDER;
+                // .rtpbf blacklist|blocks add|del|list|reset <block id>
+                if (a.length == 0) {
+                    Chat.info("Base blocks: " + bf.list(false));
+                    Chat.info("Blacklist: " + bf.list(true));
+                    Chat.info("Usage: rtpbf blacklist|blocks add|del|list|reset <block id>   (* works, e.g. *_bed)");
+                    return;
+                }
+                boolean black = a[0].toLowerCase(java.util.Locale.ROOT).startsWith("black") || a[0].equalsIgnoreCase("bl");
+                String op = a.length > 1 ? a[1].toLowerCase(java.util.Locale.ROOT) : "list";
+                switch (op) {
+                    case "add", "del", "remove", "rm" -> {
+                        if (a.length < 3) throw new IllegalArgumentException("usage: rtpbf " + a[0] + " " + op + " <block id>");
+                        String res = "";
+                        for (int i = 2; i < a.length; i++) res = bf.editList(black, op.equals("add"), a[i]);
+                        Chat.info((black ? "Blacklist: " : "Base blocks: ") + res);
+                    }
+                    case "reset", "clear" -> {
+                        bf.resetList(black);
+                        Chat.info((black ? "Blacklist: " : "Base blocks: ") + bf.list(black));
+                    }
+                    default -> Chat.info((black ? "Blacklist: " : "Base blocks: ") + bf.list(black));
+                }
+            }
             case "region", "rg" -> {
                 var rm = ModuleManager.REGION_MAP;
                 if (a.length >= 3 && a[0].equalsIgnoreCase("set")) {
@@ -115,6 +140,7 @@ public final class Commands {
         Chat.info(p + "music play|pause|next|prev|list|folder|vol <0-100>|<song name>  -  AloneByDeath player");
         Chat.info(p + "spotify play|next|prev  -  control the Spotify app");
         Chat.info(p + "staff  -  list staff online (StaffAlert)");
+        Chat.info(p + "rtpbf blacklist|blocks add|del|list|reset <block>  -  RTPBaseFinder block lists");
         Chat.info(p + "region  |  region set <1-81> <name>  -  DonutSMP region you're in / name a region");
     }
 

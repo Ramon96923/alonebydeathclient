@@ -138,27 +138,34 @@ public final class WorldRender {
             this.look = new Vec3(-Math.sin(yaw) * Math.cos(pitch), -Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
         }
 
-        public void line(Vec3 a, Vec3 b, int argb) {
+        public void line(Vec3 a, Vec3 b, int argb) { line(a, b, argb, 2f); }
+
+        /** A line with its own width (in pixels, like the vanilla line shader). */
+        public void line(Vec3 a, Vec3 b, int argb, float width) {
             if ((argb >>> 24) == 0) return;
             VertexConsumer buf = batch.getBuffer(Layers.LINES);
             lineRel(buf, (float) (a.x - cam.x), (float) (a.y - cam.y), (float) (a.z - cam.z),
-                    (float) (b.x - cam.x), (float) (b.y - cam.y), (float) (b.z - cam.z), argb);
+                    (float) (b.x - cam.x), (float) (b.y - cam.y), (float) (b.z - cam.z), argb, width);
         }
 
         private void lineRel(VertexConsumer buf, float x1, float y1, float z1, float x2, float y2, float z2, int color) {
+            lineRel(buf, x1, y1, z1, x2, y2, z2, color, 2f);
+        }
+
+        private void lineRel(VertexConsumer buf, float x1, float y1, float z1, float x2, float y2, float z2, int color, float w) {
             Vector3f normal = new Vector3f(x2, y2, z2).sub(x1, y1, z1);
             float length = normal.length();
             if (length < 1e-6f) return;
             normal.normalize();
-            buf.addVertex(pose, x1, y1, z1).setColor(color).setNormal(pose, normal).setLineWidth(2);
+            buf.addVertex(pose, x1, y1, z1).setColor(color).setNormal(pose, normal).setLineWidth(w);
             // lines crossing the camera plane get an extra vertex (works around the line shader)
             float t = new Vector3f(x1, y1, z1).negate().dot(normal);
             if (t > 0 && t < length) {
                 Vector3f close = new Vector3f(normal).mul(t).add(x1, y1, z1);
-                buf.addVertex(pose, close).setColor(color).setNormal(pose, normal).setLineWidth(2);
-                buf.addVertex(pose, close).setColor(color).setNormal(pose, normal).setLineWidth(2);
+                buf.addVertex(pose, close).setColor(color).setNormal(pose, normal).setLineWidth(w);
+                buf.addVertex(pose, close).setColor(color).setNormal(pose, normal).setLineWidth(w);
             }
-            buf.addVertex(pose, x2, y2, z2).setColor(color).setNormal(pose, normal).setLineWidth(2);
+            buf.addVertex(pose, x2, y2, z2).setColor(color).setNormal(pose, normal).setLineWidth(w);
         }
 
         /** Line from just in front of the camera to a point. */
@@ -166,21 +173,23 @@ public final class WorldRender {
             line(cam.add(look.scale(2.0)), end, argb);
         }
 
-        public void outline(AABB b, int argb) {
+        public void outline(AABB b, int argb) { outline(b, argb, 2f); }
+
+        public void outline(AABB b, int argb, float w) {
             if ((argb >>> 24) == 0) return;
             double x1 = b.minX, y1 = b.minY, z1 = b.minZ, x2 = b.maxX, y2 = b.maxY, z2 = b.maxZ;
-            line(new Vec3(x1, y1, z1), new Vec3(x2, y1, z1), argb);
-            line(new Vec3(x2, y1, z1), new Vec3(x2, y1, z2), argb);
-            line(new Vec3(x2, y1, z2), new Vec3(x1, y1, z2), argb);
-            line(new Vec3(x1, y1, z2), new Vec3(x1, y1, z1), argb);
-            line(new Vec3(x1, y2, z1), new Vec3(x2, y2, z1), argb);
-            line(new Vec3(x2, y2, z1), new Vec3(x2, y2, z2), argb);
-            line(new Vec3(x2, y2, z2), new Vec3(x1, y2, z2), argb);
-            line(new Vec3(x1, y2, z2), new Vec3(x1, y2, z1), argb);
-            line(new Vec3(x1, y1, z1), new Vec3(x1, y2, z1), argb);
-            line(new Vec3(x2, y1, z1), new Vec3(x2, y2, z1), argb);
-            line(new Vec3(x2, y1, z2), new Vec3(x2, y2, z2), argb);
-            line(new Vec3(x1, y1, z2), new Vec3(x1, y2, z2), argb);
+            line(new Vec3(x1, y1, z1), new Vec3(x2, y1, z1), argb, w);
+            line(new Vec3(x2, y1, z1), new Vec3(x2, y1, z2), argb, w);
+            line(new Vec3(x2, y1, z2), new Vec3(x1, y1, z2), argb, w);
+            line(new Vec3(x1, y1, z2), new Vec3(x1, y1, z1), argb, w);
+            line(new Vec3(x1, y2, z1), new Vec3(x2, y2, z1), argb, w);
+            line(new Vec3(x2, y2, z1), new Vec3(x2, y2, z2), argb, w);
+            line(new Vec3(x2, y2, z2), new Vec3(x1, y2, z2), argb, w);
+            line(new Vec3(x1, y2, z2), new Vec3(x1, y2, z1), argb, w);
+            line(new Vec3(x1, y1, z1), new Vec3(x1, y2, z1), argb, w);
+            line(new Vec3(x2, y1, z1), new Vec3(x2, y2, z1), argb, w);
+            line(new Vec3(x2, y1, z2), new Vec3(x2, y2, z2), argb, w);
+            line(new Vec3(x1, y1, z2), new Vec3(x1, y2, z2), argb, w);
         }
 
         public void fill(AABB b, int argb) {

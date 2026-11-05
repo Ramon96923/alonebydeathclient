@@ -77,7 +77,10 @@ The **Spotify** HUD element shows what the Spotify desktop app is playing (song,
 - Theme settings are under Client > ClickGUI: accent colour, gradient or rainbow, header style (Kami or Lambda), **GUI scale** (the menu is smaller by default now) and **corner radius** (rounded panels, switches and buttons), panel width, opacity, background dim or blur, custom font, text shadow, animation speed, and more.
 
 ## DonutSMP (the Donut panel)
-- **RTPBaseFinder** – keeps doing `/rtp east` (editable), scans every landing for storage, spawners and players, and stops with a chime and the coordinates when it finds a base. Can log you out on a find.
+- **RTPBaseFinder** – keeps doing `/rtp east` (editable) and scans every landing. When it finds a base it stops, chimes and shows the coordinates of the middle of the base, with "underground" if it's buried. It can also log you out.
+  - **Looks underground:** every block from bedrock to build height in the loaded chunks is checked, not just storage. *Search* is Everywhere, Underground (below *Underground below Y*, default 50) or Surface.
+  - **Base blocks:** what counts, e.g. chests, barrels, shulkers, ender chests, hoppers, furnaces, crafting tables, anvils, beds or beacons. *Blocks to stop* (default 6) is how many it takes, so one dungeon chest won't trigger it. *Spawners to stop* (default 2) handles spawners separately, because natural dungeons have only one.
+  - **Blacklist:** blocks that never count. Edit both lists in the click GUI (click the text to type) or with `.rtpbf blacklist add chest`, `.rtpbf blocks del crafting_table` and `.rtpbf blacklist reset`. `*` works, e.g. `*_bed`.
 - **AutoSell** – opens `/sell` when your inventory is full (or on a timer), moves your loot in and closes it, keeping your gear, hotbar and shulkers.
 - **AutoLeave** – disconnects the moment a non-friend player comes within a set radius (and switches AutoReconnect off).
 - **BaseFinder** – watches every chunk that loads around you and alerts (chat + chime + a marker column) when one has a stash: lots of containers, any spawner, or an ender chest/hopper setup. Can log you out on a find.
@@ -105,7 +108,7 @@ Some settings are text (like RTPBaseFinder's *Command*). Click one, type, then p
 ## Base finding & visuals
 - **StorageESP** outlines every chest, barrel, shulker and ender chest in your render distance, and its *Stash finder* tells you in chat when a chunk holds lots of storage.
 - **Freecam** flies the camera through walls while your body stays put: it flies where you look, eases in and out, goes faster with your sprint key, and the mouse wheel changes speed.
-- **Trajectories** shows where pearls, potions, wind charges, tridents, bows and crossbows will land. **Crosshair** is a custom crosshair with a dynamic gap and cooldown bar.
+- **Trajectories** shows where pearls, potions, wind charges, tridents, bows and crossbows will land, with a thicker path (*Line width*) and a flat *Plate* marker on the surface it hits (or a *Box* that the line stops at). The path starts a block out so it doesn't cover your crosshair. **Crosshair** is a custom crosshair with a dynamic gap and cooldown bar.
 - **Themes**: ClickGUI > *Theme* has presets (Donut, Waffle, Midnight, Ocean, Sakura, Mint, Crimson, Mono). Panels have soft shadows; the HUD has rounded boxes, adjustable opacity, a gradient watermark with FPS/ping and a **Keystrokes** element with CPS.
 - **GlintColor** recolours enchantment glint (11 colours including rainbow).
 - **Fonts**: ClickGUI > *Font* picks Inter (default), Poppins, Manrope, JetBrains Mono or Outfit.
@@ -175,6 +178,7 @@ Everything saves automatically to `.minecraft/config/donutwaffen/config.json`: m
 | `.music ...` | AloneByDeath music player (see above) |
 | `.spotify play\|next\|prev` | Control Spotify |
 | `.staff` | List staff online |
+| `.rtpbf blacklist\|blocks add\|del\|list\|reset <block>` | Edit RTPBaseFinder's lists |
 | `.region` / `.region set <1-81> <name>` | DonutSMP region you're in / name a region |
 
 ## Modules

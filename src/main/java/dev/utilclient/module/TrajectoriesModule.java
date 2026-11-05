@@ -26,6 +26,10 @@ public final class TrajectoriesModule extends Module {
     private final ColorSetting color = color("Colour", 0xFF60A5FA);
     private final ColorSetting hitColor = color("Hit colour", 0xFFEF4444);
     private final BoolSetting entities = bool("Show entity hits", true);
+    private final NumberSetting width = num("Line width", 4, 1, 10, 0.5).desc("Thickness of the path");
+    private final ModeSetting marker = mode("Landing marker", "Plate", "Plate", "Box", "None")
+            .desc("Plate: a flat square on the surface it hits (doesn't block the view). Box: a small cube");
+    private final NumberSetting markerSize = num("Marker size", 0.6, 0.2, 1.2, 0.05).visible(() -> !marker.is("None"));
 
     public TrajectoriesModule() { super("Trajectories", "Preview where throws and arrows land", Category.RENDER); }
 
@@ -47,6 +51,14 @@ public final class TrajectoriesModule extends Module {
         return null;
     }
 
+    /** A thin square lying on the face that was hit, lifted a hair off it so it doesn't flicker. */
+    private static AABB plate(Vec3 h, net.minecraft.core.Direction face, double r) {
+        double lift = 0.01, t = 0.005;
+        double cx = h.x + face.getStepX() * lift, cy = h.y + face.getStepY() * lift, cz = h.z + face.getStepZ() * lift;
+        double rx = face.getStepX() != 0 ? t : r, ry = face.getStepY() != 0 ? t : r, rz = face.getStepZ() != 0 ? t : r;
+        return new AABB(cx - rx, cy - ry, cz - rz, cx + rx, cy + ry, cz + rz);
+    }
+
     @Override
     public void renderWorld(WorldRender.Ctx ctx) {
         Minecraft mc = Minecraft.getInstance();
@@ -62,6 +74,8 @@ public final class TrajectoriesModule extends Module {
         Vec3 pos = p.getEyePosition().add(0, -0.1, 0);
 
         int rgb = color.get() & 0xFFFFFF;
+        float w = width.getFloat();
+        Vec3 eye = p.getEyePosition();
         for (int i = 0; i < 300; i++) {
             Vec3 next = pos.add(vel);
             BlockHitResult block = mc.level.clip(new ClipContext(pos, next, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
@@ -79,17 +93,38 @@ public final class TrajectoriesModule extends Module {
                     }
                 }
             }
-            int a = Math.max(60, 230 - i * 2);
-            ctx.line(pos, next, Draw.alpha(rgb, a));
+            boolean last = hitEntity != null || block.getType() != HitResult.Type.MISS;
+            Vec3 end = next;
+            AABB box = null;
+            if (last && hitEntity == null && marker.is("Box")) {
+                double r = markerSize.get() / 2;
+                Vec3 h = block.getLocation();
+                box = new AABB(h.x - r, h.y - r, h.z - r, h.x + r, h.y + r, h.z + r);
+                // stop the line where it enters the box instead of running through it
+                var entry = box.clip(pos, next);
+                if (entry.isPresent()) end = entry.get();
+            }
+            // fade in after the first block, so the line doesn't cover your crosshair
+            if (end.distanceToSqr(eye) > 1.2 * 1.2) {
+                int a = Math.max(70, 235 - i * 2);
+                ctx.line(pos.distanceToSqr(eye) < 1.2 * 1.2 ? pos.add(end.subtract(pos).normalize().scale(0.6)) : pos, end, Draw.alpha(rgb, a), w);
+            }
             if (hitEntity != null) {
                 int hr = hitColor.get() & 0xFFFFFF;
-                ctx.box(hitEntity.getBoundingBox(), Draw.alpha(hr, 50), Draw.alpha(hr, 230));
+                ctx.fill(hitEntity.getBoundingBox(), Draw.alpha(hr, 40));
+                ctx.outline(hitEntity.getBoundingBox(), Draw.alpha(hr, 235), Math.max(2f, w * 0.6f));
                 return;
             }
             if (block.getType() != HitResult.Type.MISS) {
-                Vec3 h = block.getLocation();
-                ctx.box(new AABB(h.x - 0.25, h.y - 0.25, h.z - 0.25, h.x + 0.25, h.y + 0.25, h.z + 0.25),
-                        Draw.alpha(rgb, 60), Draw.alpha(rgb, 235));
+                int hc = hitColor.get() & 0xFFFFFF;
+                if (marker.is("Box") && box != null) {
+                    ctx.fill(box, Draw.alpha(hc, 45));
+                    ctx.outline(box, Draw.alpha(hc, 235), Math.max(2f, w * 0.6f));
+                } else if (marker.is("Plate")) {
+                    AABB plate = plate(block.getLocation(), block.getDirection(), markerSize.get() / 2);
+                    ctx.fill(plate, Draw.alpha(hc, 70));
+                    ctx.outline(plate, Draw.alpha(hc, 240), Math.max(2f, w * 0.6f));
+                }
                 return;
             }
             pos = next;
